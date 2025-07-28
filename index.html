@@ -9,6 +9,7 @@
 <body>
     <div id="app">
         <h1>DoodleClone</h1>
+        <div id="message" class="hidden"></div>
         <section id="create-section">
             <h2>Create Poll</h2>
             <form id="create-form">
@@ -23,6 +24,9 @@
                 <label>
                     Proposed Dates (comma separated):
                     <input type="text" id="options" placeholder="2024-01-01 10:00, 2024-01-02 15:00" required>
+                </label>
+                <label>
+                    <input type="checkbox" id="allow-multiple"> Allow multiple selections
                 </label>
                 <button type="submit">Create</button>
             </form>
@@ -39,6 +43,7 @@
                 <button type="submit">Submit Vote</button>
             </form>
             <div id="summary" class="hidden"></div>
+            <div id="final-choice" class="hidden"></div>
             <button id="finalize" class="hidden">Finalize Poll</button>
         </section>
         <div id="share" class="hidden"></div>
