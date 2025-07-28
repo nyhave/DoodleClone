@@ -39,6 +39,23 @@ button {
     padding: 8px 16px;
     margin-top: 10px;
 }
+.signin-option {
+    margin-right: 5px;
+}
+#sign-in-options {
+    display: inline-block;
+}
+#user-info {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 10px;
+}
+#user-pic {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
 .tz-note {
     font-size: 0.9em;
     color: #555;

@@ -6,6 +6,7 @@ let editingId = null;
 let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 let currentUser = null;
 let lastCommentTs = 0;
+let lastVoteCount = 0;
 
 function formatDate(value, tz) {
         try {
@@ -29,13 +30,39 @@ function hideMessage() {
 
 function updateAuthUI() {
     const btn = document.getElementById('auth-btn');
+    const opts = document.getElementById('sign-in-options');
+    const info = document.getElementById('user-info');
+    const pic = document.getElementById('user-pic');
+    const name = document.getElementById('user-name');
     if (!btn || !firebase || !firebase.auth) return;
-    btn.textContent = currentUser ? 'Sign out' : 'Sign in';
+    if (currentUser) {
+        btn.textContent = 'Sign out';
+        if (opts) opts.classList.add('hidden');
+        if (info) info.classList.remove('hidden');
+        if (name) name.textContent = currentUser.displayName || currentUser.email;
+        if (pic) {
+            if (currentUser.photoURL) {
+                pic.src = currentUser.photoURL;
+                pic.classList.remove('hidden');
+            } else {
+                pic.classList.add('hidden');
+            }
+        }
+    } else {
+        btn.textContent = 'Sign in';
+        if (opts) opts.classList.remove('hidden');
+        if (info) info.classList.add('hidden');
+    }
 }
 
-function signIn() {
+function signIn(type = 'google') {
     if (!firebase || !firebase.auth) return;
-    const provider = new firebase.auth.GoogleAuthProvider();
+    let provider;
+    if (type === 'github') {
+        provider = new firebase.auth.GithubAuthProvider();
+    } else {
+        provider = new firebase.auth.GoogleAuthProvider();
+    }
     firebase.auth().signInWithPopup(provider);
 }
 
@@ -185,6 +212,11 @@ function renderPollList() {
         document.getElementById('edit').classList.toggle('hidden', poll.finalized);
         document.getElementById('delete').classList.toggle('hidden', poll.finalized);
         document.getElementById('export-ics').classList.toggle('hidden', !poll.finalized);
+        const feedLink = document.getElementById('calendar-feed');
+        if (feedLink) {
+            feedLink.href = `${location.origin}/feed/${poll.id}.ics`;
+            feedLink.classList.toggle('hidden', !poll.finalized);
+        }
         const finalBox = document.getElementById('final-choice');
         if (poll.finalized) {
             finalBox.textContent = 'Final choice: ' + formatDate(poll.finalChoice, displayTz);
@@ -280,10 +312,18 @@ function renderPollList() {
         return iso.replace(/[-:]/g, '').split('.')[0] + 'Z';
     }
 
-    function downloadIcs(poll) {
+    function generateIcs(poll) {
         const start = new Date(poll.finalChoice);
         const end = new Date(start.getTime() + 60 * 60000);
-        const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DoodleClone//EN\nBEGIN:VEVENT\nUID:${poll.id}@doodleclone\nDTSTAMP:${toIcsDate(new Date().toISOString())}\nDTSTART:${toIcsDate(start.toISOString())}\nDTEND:${toIcsDate(end.toISOString())}\nSUMMARY:${poll.title}\nDESCRIPTION:${poll.description}\nEND:VEVENT\nEND:VCALENDAR`;
+        return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DoodleClone//EN\nBEGIN:VEVENT\nUID:${poll.id}@doodleclone\nDTSTAMP:${toIcsDate(new Date().toISOString())}\nDTSTART:${toIcsDate(start.toISOString())}\nDTEND:${toIcsDate(end.toISOString())}\nSUMMARY:${poll.title}\nDESCRIPTION:${poll.description}\nEND:VEVENT\nEND:VCALENDAR`;
+    }
+
+    function countVotes(poll) {
+        return poll.options.reduce((s, o) => s + Object.keys(o.votes).length, 0);
+    }
+
+    function downloadIcs(poll) {
+        const ics = generateIcs(poll);
         const blob = new Blob([ics], { type: 'text/calendar' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -426,16 +466,34 @@ function renderPollList() {
     });
 
     async function init() {
-        const theme = localStorage.getItem('theme');
+        const savedTheme = localStorage.getItem('theme') || 'system';
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
         }
-        if (theme === 'dark') {
-            document.body.classList.add('dark');
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        function applyTheme(th) {
+            if (th === 'dark') {
+                document.body.classList.add('dark');
+            } else if (th === 'light') {
+                document.body.classList.remove('dark');
+            } else {
+                document.body.classList.toggle('dark', mq.matches);
+            }
+        }
+        applyTheme(savedTheme);
+        if (savedTheme === 'system') {
+            mq.addEventListener('change', e => {
+                if ((localStorage.getItem('theme') || 'system') === 'system') {
+                    document.body.classList.toggle('dark', e.matches);
+                }
+            });
         }
         document.getElementById('toggle-theme').addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+            const order = ['light', 'dark', 'system'];
+            let current = localStorage.getItem('theme') || 'system';
+            let next = order[(order.indexOf(current) + 1) % order.length];
+            localStorage.setItem('theme', next);
+            applyTheme(next);
         });
 
         if (firebase && firebase.auth) {
@@ -444,10 +502,14 @@ function renderPollList() {
                 updateAuthUI();
             });
             updateAuthUI();
+            const googleBtn = document.getElementById('google-signin');
+            if (googleBtn) googleBtn.addEventListener('click', () => signIn('google'));
+            const githubBtn = document.getElementById('github-signin');
+            if (githubBtn) githubBtn.addEventListener('click', () => signIn('github'));
             const authBtn = document.getElementById('auth-btn');
             if (authBtn) {
                 authBtn.addEventListener('click', () => {
-                    if (currentUser) signOut(); else signIn();
+                    if (currentUser) signOut();
                 });
             }
         }
@@ -467,6 +529,16 @@ function renderPollList() {
                     renderPoll(poll);
                     renderSummary(poll);
                     renderComments(poll);
+                    const votes = countVotes(poll);
+                    if (lastVoteCount && votes > lastVoteCount) {
+                        if ('Notification' in window) {
+                            if (Notification.permission === 'default') { Notification.requestPermission(); }
+                            if (Notification.permission === 'granted') {
+                                new Notification('New vote', { body: poll.title });
+                            }
+                        }
+                    }
+                    lastVoteCount = votes;
                     if (poll.comments && poll.comments.length) {
                         const latest = Math.max(...poll.comments.map(c => c.ts));
                         if (lastCommentTs && latest > lastCommentTs) {
@@ -485,6 +557,7 @@ function renderPollList() {
             if (poll) {
                 showShareLink(pollId);
                 await scheduleReminder(pollId);
+                lastVoteCount = countVotes(poll);
                 if (poll.comments && poll.comments.length) {
                     lastCommentTs = Math.max(...poll.comments.map(c => c.ts));
                 }
