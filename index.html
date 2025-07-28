@@ -73,10 +73,10 @@
             <div id="summary" class="hidden"></div>
             <div id="participants" class="hidden"></div>
             <div id="final-choice" class="hidden"></div>
-            <button id="export-ics" class="hidden">Add to Calendar</button>
-            <button id="finalize" class="hidden">Finalize Poll</button>
-            <button id="edit" class="hidden">Edit Poll</button>
-            <button id="delete" class="hidden">Delete Poll</button>
+            <button id="export-ics" aria-label="Add event to calendar" class="hidden">Add to Calendar</button>
+            <button id="finalize" aria-label="Finalize poll" class="hidden">Finalize Poll</button>
+            <button id="edit" aria-label="Edit poll" class="hidden">Edit Poll</button>
+            <button id="delete" aria-label="Delete poll" class="hidden">Delete Poll</button>
         </section>
         <div id="share" class="hidden"></div>
     </div>
@@ -84,6 +84,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
     <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
+    <script type="module">
+import { init } from "./script.js";
+document.addEventListener("DOMContentLoaded", init);
+</script>
 </body>
 </html>
