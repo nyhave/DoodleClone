@@ -129,8 +129,12 @@ function renderPollList() {
     const list = document.getElementById('poll-list');
     if (!list) return;
     const polls = loadPolls();
+    const term = (document.getElementById('poll-search')?.value || '').toLowerCase();
     list.innerHTML = '';
-    Object.values(polls).forEach(p => {
+    Object.values(polls)
+        .sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
+        .filter(p => p.title.toLowerCase().includes(term) || (p.description||'').toLowerCase().includes(term))
+        .forEach(p => {
         const row = document.createElement('div');
         const title = document.createElement('span');
         title.textContent = p.title;
@@ -212,10 +216,24 @@ function renderPollList() {
         document.getElementById('edit').classList.toggle('hidden', poll.finalized);
         document.getElementById('delete').classList.toggle('hidden', poll.finalized);
         document.getElementById('export-ics').classList.toggle('hidden', !poll.finalized);
+        const gcal = document.getElementById('google-calendar');
+        if (gcal) {
+            gcal.href = googleCalUrl(poll);
+            gcal.classList.toggle('hidden', !poll.finalized);
+        }
         const feedLink = document.getElementById('calendar-feed');
         if (feedLink) {
             feedLink.href = `${location.origin}/feed/${poll.id}.ics`;
             feedLink.classList.toggle('hidden', !poll.finalized);
+        }
+        const emailBtn = document.getElementById('email-reminder');
+        if (emailBtn) {
+            emailBtn.onclick = () => {
+                const subject = encodeURIComponent('Poll Reminder: ' + poll.title);
+                const body = encodeURIComponent('Please respond to the poll at ' + location.href);
+                location.href = `mailto:?subject=${subject}&body=${body}`;
+            };
+            emailBtn.classList.toggle('hidden', !poll.deadline);
         }
         const finalBox = document.getElementById('final-choice');
         if (poll.finalized) {
@@ -239,6 +257,7 @@ function renderPollList() {
         summary.innerHTML = '<h3>Current votes</h3>';
         const counts = poll.options.map(o => Object.keys(o.votes).length);
         const max = Math.max(1, ...counts);
+        const total = counts.reduce((s,c) => s + c, 0);
         poll.options.forEach(opt => {
             const row = document.createElement('div');
             row.className = 'summary-row';
@@ -252,7 +271,8 @@ function renderPollList() {
             bar.style.width = (count / max * 100) + '%';
             barContainer.appendChild(bar);
             const countSpan = document.createElement('span');
-            countSpan.textContent = ' ' + count;
+            const pct = total ? Math.round(count / total * 100) : 0;
+            countSpan.textContent = ` ${count} (${pct}%)`;
             row.appendChild(label);
             row.appendChild(barContainer);
             row.appendChild(countSpan);
@@ -330,6 +350,16 @@ function renderPollList() {
         a.download = (poll.title || 'event') + '.ics';
         a.click();
         URL.revokeObjectURL(a.href);
+    }
+
+    function googleCalUrl(poll) {
+        const start = new Date(poll.finalChoice);
+        const end = new Date(start.getTime() + 60 * 60000);
+        const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+        const text = '&text=' + encodeURIComponent(poll.title);
+        const dates = '&dates=' + toIcsDate(start.toISOString()) + '/' + toIcsDate(end.toISOString());
+        const details = '&details=' + encodeURIComponent(poll.description);
+        return base + text + dates + details;
     }
 
     document.getElementById('create-form').addEventListener('submit', async function(e) {
@@ -474,9 +504,15 @@ function renderPollList() {
         function applyTheme(th) {
             if (th === 'dark') {
                 document.body.classList.add('dark');
+                document.body.classList.remove('contrast');
             } else if (th === 'light') {
                 document.body.classList.remove('dark');
+                document.body.classList.remove('contrast');
+            } else if (th === 'contrast') {
+                document.body.classList.add('contrast');
+                document.body.classList.remove('dark');
             } else {
+                document.body.classList.remove('contrast');
                 document.body.classList.toggle('dark', mq.matches);
             }
         }
@@ -489,7 +525,7 @@ function renderPollList() {
             });
         }
         document.getElementById('toggle-theme').addEventListener('click', () => {
-            const order = ['light', 'dark', 'system'];
+            const order = ['light', 'dark', 'contrast', 'system'];
             let current = localStorage.getItem('theme') || 'system';
             let next = order[(order.indexOf(current) + 1) % order.length];
             localStorage.setItem('theme', next);
@@ -589,6 +625,10 @@ function renderPollList() {
                 document.getElementById('manage-section').classList.remove('hidden');
                 renderPollList();
             });
+        }
+        const searchBox = document.getElementById('poll-search');
+        if (searchBox) {
+            searchBox.addEventListener('input', renderPollList);
         }
         const backBtn = document.getElementById('back-to-create');
         if (backBtn) {
