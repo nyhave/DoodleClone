@@ -1,5 +1,6 @@
 (function() {
     const STORAGE_KEY = 'doodle-polls';
+    let editingId = null;
 
     function showMessage(msg) {
         const box = document.getElementById('message');
@@ -59,6 +60,27 @@
         });
     }
 
+    function populateForm(poll) {
+        document.getElementById('title').value = poll.title;
+        document.getElementById('description').value = poll.description;
+        document.getElementById('allow-multiple').checked = poll.allowMultiple;
+        const list = document.getElementById('option-list');
+        list.innerHTML = '';
+        poll.options.forEach(opt => addOptionRow(opt.value));
+        editingId = poll.id;
+        document.querySelector('#create-section h2').textContent = 'Edit Poll';
+        document.querySelector('#create-form button[type="submit"]').textContent = 'Save';
+    }
+
+    function resetForm() {
+        document.getElementById('create-form').reset();
+        document.getElementById('option-list').innerHTML = '';
+        addOptionRow();
+        editingId = null;
+        document.querySelector('#create-section h2').textContent = 'Create Poll';
+        document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
+    }
+
     function createPoll(title, description, options, allowMultiple) {
         const polls = loadPolls();
         const id = generateId();
@@ -86,6 +108,12 @@
         savePolls(polls);
     }
 
+    function deletePoll(id) {
+        const polls = loadPolls();
+        delete polls[id];
+        savePolls(polls);
+    }
+
     function renderPoll(poll) {
         document.getElementById('poll-title').textContent = poll.title;
         document.getElementById('poll-desc').textContent = poll.description;
@@ -106,6 +134,8 @@
         });
         document.getElementById('poll-section').classList.remove('hidden');
         document.getElementById('finalize').classList.toggle('hidden', poll.finalized);
+        document.getElementById('edit').classList.toggle('hidden', poll.finalized);
+        document.getElementById('delete').classList.toggle('hidden', poll.finalized);
         const finalBox = document.getElementById('final-choice');
         if (poll.finalized) {
             finalBox.textContent = 'Final choice: ' + new Date(poll.finalChoice).toLocaleString();
@@ -167,12 +197,28 @@
             showMessage('Please provide a title and at least one unique option.');
             return;
         }
-        const id = createPoll(title, desc, options, allowMultiple);
+        let id = editingId;
+        if (editingId) {
+            const poll = getPoll(editingId);
+            const newOptions = options.map(v => {
+                const existing = poll.options.find(o => o.value === v);
+                return { value: v, votes: existing ? existing.votes : {} };
+            });
+            poll.title = title;
+            poll.description = desc;
+            poll.options = newOptions;
+            poll.allowMultiple = allowMultiple;
+            savePoll(poll);
+        } else {
+            id = createPoll(title, desc, options, allowMultiple);
+        }
         history.replaceState({}, '', '?poll=' + id);
         document.getElementById('create-section').classList.add('hidden');
         const poll = getPoll(id);
         renderPoll(poll);
+        renderSummary(poll);
         showShareLink(id);
+        resetForm();
     });
 
     document.getElementById('vote-form').addEventListener('submit', function(e) {
@@ -213,7 +259,33 @@
         renderSummary(poll);
     });
 
+    document.getElementById('edit').addEventListener('click', function() {
+        const pollId = new URLSearchParams(location.search).get('poll');
+        const poll = getPoll(pollId);
+        if (!poll || poll.finalized) return;
+        populateForm(poll);
+        document.getElementById('poll-section').classList.add('hidden');
+        document.getElementById('create-section').classList.remove('hidden');
+    });
+
+    document.getElementById('delete').addEventListener('click', function() {
+        const pollId = new URLSearchParams(location.search).get('poll');
+        if (!pollId) return;
+        if (!confirm('Delete this poll?')) return;
+        deletePoll(pollId);
+        history.replaceState({}, '', location.pathname);
+        document.getElementById('poll-section').classList.add('hidden');
+        document.getElementById('share').classList.add('hidden');
+        document.getElementById('create-section').classList.remove('hidden');
+        resetForm();
+        showMessage('Poll deleted.');
+    });
+
     function init() {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.querySelectorAll('.tz-note').forEach(el => {
+            el.textContent = 'Times shown in your local time zone: ' + tz;
+        });
         const params = new URLSearchParams(location.search);
         const pollId = params.get('poll');
         if (pollId) {
