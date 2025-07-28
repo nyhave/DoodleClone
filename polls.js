@@ -47,7 +47,11 @@ export async function createPoll(title, description, options, allowMultiple, dea
     };
     savePolls(polls);
     if (db) {
-        await db.collection('polls').doc(id).set(polls[id]);
+        try {
+            await db.collection('polls').doc(id).set(polls[id]);
+        } catch (e) {
+            console.warn('Firestore unavailable, using local storage only', e);
+        }
     }
     return id;
 }
@@ -56,11 +60,15 @@ export async function getPoll(id) {
     const polls = loadPolls();
     if (polls[id]) return polls[id];
     if (db) {
-        const doc = await db.collection('polls').doc(id).get();
-        if (doc.exists) {
-            polls[id] = doc.data();
-            savePolls(polls);
-            return polls[id];
+        try {
+            const doc = await db.collection('polls').doc(id).get();
+            if (doc.exists) {
+                polls[id] = doc.data();
+                savePolls(polls);
+                return polls[id];
+            }
+        } catch (e) {
+            console.warn('Unable to fetch poll from Firestore', e);
         }
     }
     return null;
@@ -71,7 +79,11 @@ export async function savePoll(poll) {
     polls[poll.id] = poll;
     savePolls(polls);
     if (db) {
-        await db.collection('polls').doc(poll.id).set(poll);
+        try {
+            await db.collection('polls').doc(poll.id).set(poll);
+        } catch (e) {
+            console.warn('Unable to sync poll to Firestore', e);
+        }
     }
 }
 
@@ -80,7 +92,11 @@ export async function deletePoll(id) {
     delete polls[id];
     savePolls(polls);
     if (db) {
-        await db.collection('polls').doc(id).delete();
+        try {
+            await db.collection('polls').doc(id).delete();
+        } catch (e) {
+            console.warn('Unable to delete poll from Firestore', e);
+        }
     }
 }
 
@@ -111,14 +127,18 @@ export async function deleteComment(id, ts) {
 
 export function watchPoll(id, callback) {
     if (db) {
-        return db.collection('polls').doc(id).onSnapshot(doc => {
-            if (doc.exists) {
-                const polls = loadPolls();
-                polls[id] = doc.data();
-                savePolls(polls);
-                callback(polls[id]);
-            }
-        });
+        try {
+            return db.collection('polls').doc(id).onSnapshot(doc => {
+                if (doc.exists) {
+                    const polls = loadPolls();
+                    polls[id] = doc.data();
+                    savePolls(polls);
+                    callback(polls[id]);
+                }
+            });
+        } catch (e) {
+            console.warn('Unable to watch poll in Firestore', e);
+        }
     }
     // Fallback to localStorage only
     const poll = loadPolls()[id] || null;
