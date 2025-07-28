@@ -441,6 +441,29 @@
                 document.getElementById('toggle-theme').click();
             }
         });
+
+        let startX = 0;
+        let startY = 0;
+        document.addEventListener('touchstart', e => {
+            if (!window.matchMedia('(max-width: 480px)').matches) return;
+            const t = e.changedTouches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', e => {
+            if (!window.matchMedia('(max-width: 480px)').matches) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - startX;
+            const dy = t.clientY - startY;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                const section = document.getElementById('poll-section');
+                if (dx < 0) {
+                    section.classList.add('show-summary');
+                } else {
+                    section.classList.remove('show-summary');
+                }
+            }
+        }, { passive: true });
     }
 
     init();

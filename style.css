@@ -112,6 +112,8 @@ button:focus {
     button {
         padding: 16px;
         font-size: 1.2em;
+        min-width: 44px;
+        min-height: 44px;
     }
     input[type="checkbox"] {
         width: 1.4em;
@@ -129,5 +131,18 @@ button:focus {
         bottom: 10px;
         right: 10px;
         z-index: 1000;
+        padding: 20px 24px;
+        font-size: 1.4em;
+        border-radius: 8px;
+        min-width: 56px;
+        min-height: 56px;
     }
+}
+
+#poll-section.show-summary #vote-form {
+    display: none;
+}
+
+#poll-section.show-summary #summary {
+    display: block;
 }
