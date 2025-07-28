@@ -2,6 +2,7 @@
     const STORAGE_KEY = 'doodle-polls';
     let editingId = null;
     let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const db = (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
 
     function formatDate(value, tz) {
         try {
@@ -90,7 +91,7 @@
         document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
     }
 
-    function createPoll(title, description, options, allowMultiple, deadline, reminder, tz) {
+    async function createPoll(title, description, options, allowMultiple, deadline, reminder, tz) {
         const polls = loadPolls();
         const id = generateId();
         polls[id] = {
@@ -106,28 +107,46 @@
             finalChoice: null
         };
         savePolls(polls);
+        if (db) {
+            await db.collection('polls').doc(id).set(polls[id]);
+        }
         return id;
     }
 
-    function getPoll(id) {
+    async function getPoll(id) {
         const polls = loadPolls();
-        return polls[id];
+        if (polls[id]) return polls[id];
+        if (db) {
+            const doc = await db.collection('polls').doc(id).get();
+            if (doc.exists) {
+                polls[id] = doc.data();
+                savePolls(polls);
+                return polls[id];
+            }
+        }
+        return null;
     }
 
-    function savePoll(poll) {
+    async function savePoll(poll) {
         const polls = loadPolls();
         polls[poll.id] = poll;
         savePolls(polls);
+        if (db) {
+            await db.collection('polls').doc(poll.id).set(poll);
+        }
     }
 
-    function deletePoll(id) {
+    async function deletePoll(id) {
         const polls = loadPolls();
         delete polls[id];
         savePolls(polls);
+        if (db) {
+            await db.collection('polls').doc(id).delete();
+        }
     }
 
-    function scheduleReminder(id) {
-        const poll = getPoll(id);
+    async function scheduleReminder(id) {
+        const poll = await getPoll(id);
         if (!poll || !poll.deadline || !poll.reminder) return;
         if (!('Notification' in window)) return;
         if (Notification.permission === 'default') {
@@ -273,7 +292,7 @@
         URL.revokeObjectURL(a.href);
     }
 
-    document.getElementById('create-form').addEventListener('submit', function(e) {
+    document.getElementById('create-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         hideMessage();
         const title = document.getElementById('title').value.trim();
@@ -292,7 +311,7 @@
         }
         let id = editingId;
         if (editingId) {
-            const poll = getPoll(editingId);
+            const poll = await getPoll(editingId);
             const newOptions = options.map(v => {
                 const existing = poll.options.find(o => o.value === v);
                 return { value: v, votes: existing ? existing.votes : {} };
@@ -304,26 +323,26 @@
             poll.deadline = deadline;
             poll.reminder = reminder;
             poll.tz = pollTz;
-            savePoll(poll);
-            scheduleReminder(poll.id);
+            await savePoll(poll);
+            await scheduleReminder(poll.id);
         } else {
-            id = createPoll(title, desc, options, allowMultiple, deadline, reminder, pollTz);
-            scheduleReminder(id);
+            id = await createPoll(title, desc, options, allowMultiple, deadline, reminder, pollTz);
+            await scheduleReminder(id);
         }
         history.replaceState({}, '', '?poll=' + id);
         document.getElementById('create-section').classList.add('hidden');
-        const poll = getPoll(id);
+        const poll = await getPoll(id);
         renderPoll(poll);
         renderSummary(poll);
         showShareLink(id);
         resetForm();
     });
 
-    document.getElementById('vote-form').addEventListener('submit', function(e) {
+    document.getElementById('vote-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         hideMessage();
         const pollId = new URLSearchParams(location.search).get('poll');
-        const poll = getPoll(pollId);
+        const poll = await getPoll(pollId);
         const name = document.getElementById('participant').value.trim();
         if (!poll || !name) return;
         if (poll.finalized) {
@@ -346,46 +365,46 @@
         checked.forEach(idx => {
             poll.options[idx].votes[name] = true;
         });
-        savePoll(poll);
+        await savePoll(poll);
         renderSummary(poll);
         showMessage('Vote recorded.');
     });
 
-    document.getElementById('finalize').addEventListener('click', function() {
+    document.getElementById('finalize').addEventListener('click', async function() {
         const pollId = new URLSearchParams(location.search).get('poll');
-        const poll = getPoll(pollId);
+        const poll = await getPoll(pollId);
         if (!poll) return;
         const best = poll.options.reduce((prev, curr) => Object.keys(curr.votes).length > Object.keys(prev.votes).length ? curr : prev);
         poll.finalized = true;
         poll.finalChoice = best.value;
-        savePoll(poll);
+        await savePoll(poll);
         renderPoll(poll);
         renderSummary(poll);
         showMessage('Poll finalized.');
     });
 
-    document.getElementById('export-ics').addEventListener('click', function() {
+    document.getElementById('export-ics').addEventListener('click', async function() {
         const pollId = new URLSearchParams(location.search).get('poll');
-        const poll = getPoll(pollId);
+        const poll = await getPoll(pollId);
         if (poll && poll.finalized && poll.finalChoice) {
             downloadIcs(poll);
         }
     });
 
-    document.getElementById('edit').addEventListener('click', function() {
+    document.getElementById('edit').addEventListener('click', async function() {
         const pollId = new URLSearchParams(location.search).get('poll');
-        const poll = getPoll(pollId);
+        const poll = await getPoll(pollId);
         if (!poll || poll.finalized) return;
         populateForm(poll);
         document.getElementById('poll-section').classList.add('hidden');
         document.getElementById('create-section').classList.remove('hidden');
     });
 
-    document.getElementById('delete').addEventListener('click', function() {
+    document.getElementById('delete').addEventListener('click', async function() {
         const pollId = new URLSearchParams(location.search).get('poll');
         if (!pollId) return;
         if (!confirm('Delete this poll?')) return;
-        deletePoll(pollId);
+        await deletePoll(pollId);
         history.replaceState({}, '', location.pathname);
         document.getElementById('poll-section').classList.add('hidden');
         document.getElementById('share').classList.add('hidden');
@@ -394,7 +413,7 @@
         showMessage('Poll deleted.');
     });
 
-    function init() {
+    async function init() {
         const theme = localStorage.getItem('theme');
         if (theme === 'dark') {
             document.body.classList.add('dark');
@@ -412,12 +431,12 @@
         const pollId = params.get('poll');
         if (pollId) {
             document.getElementById('create-section').classList.add('hidden');
-            const poll = getPoll(pollId);
+            const poll = await getPoll(pollId);
             if (poll) {
                 renderPoll(poll);
                 renderSummary(poll);
                 showShareLink(pollId);
-                scheduleReminder(pollId);
+                await scheduleReminder(pollId);
             } else {
                 showMessage('Poll not found. It may have expired or been created on another device.');
             }
