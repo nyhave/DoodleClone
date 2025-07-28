@@ -67,6 +67,7 @@
         </section>
         <section id="manage-section" class="hidden">
             <h2>My Polls</h2>
+            <input type="text" id="poll-search" aria-label="Search polls" placeholder="Search">
             <div id="poll-list"></div>
             <button type="button" id="back-to-create">Back</button>
         </section>
@@ -101,8 +102,10 @@
                 </label>
                 <button type="submit">Post Comment</button>
             </form>
-            <button id="export-ics" aria-label="Add event to calendar" class="hidden">Add to Calendar</button>
+            <button id="export-ics" aria-label="Add event to calendar" class="hidden">Download ICS</button>
+            <a id="google-calendar" class="hidden" aria-label="Add to Google Calendar" target="_blank">Google Calendar</a>
             <a id="calendar-feed" class="hidden" aria-label="Subscribe to calendar" download>Subscribe</a>
+            <button id="email-reminder" aria-label="Send poll reminder" class="hidden">Email Reminder</button>
             <button id="finalize" aria-label="Finalize poll" class="hidden">Finalize Poll</button>
             <button id="edit" aria-label="Edit poll" class="hidden">Edit Poll</button>
             <button id="delete" aria-label="Delete poll" class="hidden">Delete Poll</button>

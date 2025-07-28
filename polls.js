@@ -29,7 +29,8 @@ export async function createPoll(title, description, options, allowMultiple, dea
         tz,
         comments: [],
         finalized: false,
-        finalChoice: null
+        finalChoice: null,
+        createdAt: Date.now()
     };
     savePolls(polls);
     if (db) {

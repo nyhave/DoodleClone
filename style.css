@@ -73,6 +73,14 @@ body.dark {
     --bar-color: #9cf;
 }
 
+body.contrast {
+    --bg: #000;
+    --text: #fff;
+    --card-bg: #000;
+    --bar-bg: #fff;
+    --bar-color: #ff0;
+}
+
 input:focus,
 textarea:focus,
 button:focus {
