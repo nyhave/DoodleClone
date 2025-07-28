@@ -8,6 +8,8 @@ Open `index.html` in a browser to test locally. Creating a poll generates a shar
 
 Polls now support optional multiple selections and can be finalized once a consensus is reached. Options are entered with date/time pickers so each value is stored in ISO format with time zone support. After voting, results are displayed with small bars showing the relative popularity of each option.
 
+Additional features include optional poll deadlines with local reminder notifications, participant management with editable votes, a selectable time zone for display, improved accessibility with ARIA alerts and keyboard shortcuts, a dark mode toggle, and a sticky "Add Option" button on mobile screens.
+
 If a shared link is opened on a different device and the poll does not exist locally, a clearer message is displayed explaining that the poll may have expired or been created elsewhere.
 
 The mobile layout has been tweaked so form controls and buttons span the available width on small screens.
