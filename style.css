@@ -150,3 +150,9 @@ button:focus {
 #comments div {
     margin-bottom: 5px;
 }
+
+#poll-list div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}

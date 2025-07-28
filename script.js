@@ -4,6 +4,8 @@ setDB(dbInstance);
 
 let editingId = null;
 let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+let currentUser = null;
+let lastCommentTs = 0;
 
 function formatDate(value, tz) {
         try {
@@ -19,11 +21,28 @@ function formatDate(value, tz) {
         box.classList.remove('hidden');
     }
 
-    function hideMessage() {
-        const box = document.getElementById('message');
-        box.classList.add('hidden');
-        box.textContent = '';
-    }
+function hideMessage() {
+    const box = document.getElementById('message');
+    box.classList.add('hidden');
+    box.textContent = '';
+}
+
+function updateAuthUI() {
+    const btn = document.getElementById('auth-btn');
+    if (!btn || !firebase || !firebase.auth) return;
+    btn.textContent = currentUser ? 'Sign out' : 'Sign in';
+}
+
+function signIn() {
+    if (!firebase || !firebase.auth) return;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider);
+}
+
+function signOut() {
+    if (!firebase || !firebase.auth) return;
+    firebase.auth().signOut();
+}
     function addOptionRow(value = '') {
         const row = document.createElement('div');
         row.className = 'option-row';
@@ -70,14 +89,45 @@ function formatDate(value, tz) {
         document.querySelector('#create-form button[type="submit"]').textContent = 'Save';
     }
 
-    function resetForm() {
-        document.getElementById('create-form').reset();
-        document.getElementById('option-list').innerHTML = '';
-        addOptionRow();
-        editingId = null;
-        document.querySelector('#create-section h2').textContent = 'Create Poll';
-        document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
-    }
+function resetForm() {
+    document.getElementById('create-form').reset();
+    document.getElementById('option-list').innerHTML = '';
+    addOptionRow();
+    editingId = null;
+    document.querySelector('#create-section h2').textContent = 'Create Poll';
+    document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
+}
+
+function renderPollList() {
+    const list = document.getElementById('poll-list');
+    if (!list) return;
+    const polls = loadPolls();
+    list.innerHTML = '';
+    Object.values(polls).forEach(p => {
+        const row = document.createElement('div');
+        const title = document.createElement('span');
+        title.textContent = p.title;
+        const edit = document.createElement('button');
+        edit.textContent = 'Edit';
+        edit.addEventListener('click', () => {
+            populateForm(p);
+            document.getElementById('manage-section').classList.add('hidden');
+            document.getElementById('create-section').classList.remove('hidden');
+        });
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.addEventListener('click', async () => {
+            if (confirm('Delete this poll?')) {
+                await deletePoll(p.id);
+                renderPollList();
+            }
+        });
+        row.appendChild(title);
+        row.appendChild(edit);
+        row.appendChild(del);
+        list.appendChild(row);
+    });
+}
 
     async function scheduleReminder(id) {
         const poll = await getPoll(id);
@@ -388,10 +438,26 @@ function formatDate(value, tz) {
             localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
         });
 
+        if (firebase && firebase.auth) {
+            firebase.auth().onAuthStateChanged(user => {
+                currentUser = user;
+                updateAuthUI();
+            });
+            updateAuthUI();
+            const authBtn = document.getElementById('auth-btn');
+            if (authBtn) {
+                authBtn.addEventListener('click', () => {
+                    if (currentUser) signOut(); else signIn();
+                });
+            }
+        }
+
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         document.querySelectorAll('.tz-note').forEach(el => {
             el.textContent = 'Times shown in your local time zone: ' + tz;
         });
+
+        renderPollList();
         const params = new URLSearchParams(location.search);
         const pollId = params.get('poll');
         if (pollId) {
@@ -401,17 +467,63 @@ function formatDate(value, tz) {
                     renderPoll(poll);
                     renderSummary(poll);
                     renderComments(poll);
+                    if (poll.comments && poll.comments.length) {
+                        const latest = Math.max(...poll.comments.map(c => c.ts));
+                        if (lastCommentTs && latest > lastCommentTs) {
+                            if ('Notification' in window) {
+                                if (Notification.permission === 'default') { Notification.requestPermission(); }
+                                if (Notification.permission === 'granted') {
+                                    new Notification('New comment', { body: poll.title });
+                                }
+                            }
+                        }
+                        lastCommentTs = latest;
+                    }
                 }
             });
             const poll = await getPoll(pollId);
             if (poll) {
                 showShareLink(pollId);
                 await scheduleReminder(pollId);
+                if (poll.comments && poll.comments.length) {
+                    lastCommentTs = Math.max(...poll.comments.map(c => c.ts));
+                }
             } else {
                 showMessage('Poll not found. It may have expired or been created on another device.');
             }
         }
         document.getElementById('add-option').addEventListener('click', () => addOptionRow());
+        const nextBtn = document.getElementById('next-week');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const inputs = document.querySelectorAll('.option-input');
+                inputs.forEach(inp => {
+                    if (inp.value) {
+                        const dt = new Date(inp.value);
+                        dt.setDate(dt.getDate() + 7);
+                        addOptionRow(dt.toISOString());
+                    }
+                });
+            });
+        }
+
+        const showManage = document.getElementById('show-manage');
+        if (showManage) {
+            showManage.addEventListener('click', () => {
+                document.getElementById('create-section').classList.add('hidden');
+                document.getElementById('poll-section').classList.add('hidden');
+                document.getElementById('share').classList.add('hidden');
+                document.getElementById('manage-section').classList.remove('hidden');
+                renderPollList();
+            });
+        }
+        const backBtn = document.getElementById('back-to-create');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                document.getElementById('manage-section').classList.add('hidden');
+                document.getElementById('create-section').classList.remove('hidden');
+            });
+        }
         updateRemoveButtons();
 
         if ('vibrate' in navigator) {

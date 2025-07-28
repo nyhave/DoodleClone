@@ -10,6 +10,8 @@
     <div id="app">
         <h1>DoodleClone</h1>
         <button id="toggle-theme" aria-label="Toggle dark mode">🌙</button>
+        <button id="auth-btn">Sign in</button>
+        <button id="show-manage">My Polls</button>
         <div id="message" role="alert" aria-live="polite" class="hidden"></div>
         <section id="create-section">
             <h2>Create Poll</h2>
@@ -30,6 +32,7 @@
                     </div>
                 </div>
                 <button type="button" id="add-option" aria-label="Add option">Add Option</button>
+                <button type="button" id="next-week">Next Week</button>
                 <label>
                     <input type="checkbox" id="allow-multiple"> Allow multiple selections
                 </label>
@@ -53,6 +56,11 @@
                 </label>
                 <button type="submit">Create</button>
             </form>
+        </section>
+        <section id="manage-section" class="hidden">
+            <h2>My Polls</h2>
+            <div id="poll-list"></div>
+            <button type="button" id="back-to-create">Back</button>
         </section>
         <section id="poll-section" class="hidden">
             <h2 id="poll-title"></h2>
@@ -94,6 +102,7 @@
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script type="module">
