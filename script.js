@@ -1,4 +1,4 @@
-import { loadPolls, savePolls, generateId, createPoll, getPoll, savePoll, deletePoll, setDB } from "./polls.js";
+import { loadPolls, savePolls, generateId, createPoll, getPoll, savePoll, deletePoll, addComment, watchPoll, setDB } from "./polls.js";
 const dbInstance = (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
 setDB(dbInstance);
 
@@ -77,10 +77,7 @@ function formatDate(value, tz) {
         editingId = null;
         document.querySelector('#create-section h2').textContent = 'Create Poll';
         document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
-    }        return id;
-    }        }
-        return null;
-    }    }    }
+    }
 
     async function scheduleReminder(id) {
         const poll = await getPoll(id);
@@ -207,6 +204,22 @@ function formatDate(value, tz) {
         participantsEl.classList.toggle('hidden', names.length === 0);
     }
 
+    function renderComments(poll) {
+        const container = document.getElementById('comments');
+        container.innerHTML = '';
+        (poll.comments || []).forEach(c => {
+            const div = document.createElement('div');
+            const name = document.createElement('strong');
+            name.textContent = c.name + ': ';
+            const text = document.createElement('span');
+            text.textContent = c.text;
+            div.appendChild(name);
+            div.appendChild(text);
+            container.appendChild(div);
+        });
+        container.classList.toggle('hidden', (poll.comments || []).length === 0);
+    }
+
     function showShareLink(id) {
         const share = document.getElementById('share');
         share.innerHTML = `<p>Share this link: <a href="?poll=${id}">${location.href.split('?')[0]}?poll=${id}</a></p>`;
@@ -271,6 +284,7 @@ function formatDate(value, tz) {
         const poll = await getPoll(id);
         renderPoll(poll);
         renderSummary(poll);
+        renderComments(poll);
         showShareLink(id);
         resetForm();
     });
@@ -317,6 +331,7 @@ function formatDate(value, tz) {
         await savePoll(poll);
         renderPoll(poll);
         renderSummary(poll);
+        renderComments(poll);
         showMessage('Poll finalized.');
     });
 
@@ -350,6 +365,16 @@ function formatDate(value, tz) {
         showMessage('Poll deleted.');
     });
 
+    document.getElementById('comment-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const pollId = new URLSearchParams(location.search).get('poll');
+        const name = document.getElementById('comment-name').value.trim();
+        const text = document.getElementById('comment-text').value.trim();
+        if (!pollId || !name || !text) return;
+        await addComment(pollId, name, text);
+        document.getElementById('comment-text').value = '';
+    });
+
     async function init() {
         const theme = localStorage.getItem('theme');
         if ("serviceWorker" in navigator) {
@@ -371,10 +396,15 @@ function formatDate(value, tz) {
         const pollId = params.get('poll');
         if (pollId) {
             document.getElementById('create-section').classList.add('hidden');
+            watchPoll(pollId, poll => {
+                if (poll) {
+                    renderPoll(poll);
+                    renderSummary(poll);
+                    renderComments(poll);
+                }
+            });
             const poll = await getPoll(pollId);
             if (poll) {
-                renderPoll(poll);
-                renderSummary(poll);
                 showShareLink(pollId);
                 await scheduleReminder(pollId);
             } else {

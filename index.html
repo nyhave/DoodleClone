@@ -73,6 +73,18 @@
             <div id="summary" class="hidden"></div>
             <div id="participants" class="hidden"></div>
             <div id="final-choice" class="hidden"></div>
+            <div id="comments" class="hidden"></div>
+            <form id="comment-form">
+                <label>
+                    Name:
+                    <input type="text" id="comment-name" required>
+                </label>
+                <label>
+                    Comment:
+                    <textarea id="comment-text" required></textarea>
+                </label>
+                <button type="submit">Post Comment</button>
+            </form>
             <button id="export-ics" aria-label="Add event to calendar" class="hidden">Add to Calendar</button>
             <button id="finalize" aria-label="Finalize poll" class="hidden">Finalize Poll</button>
             <button id="edit" aria-label="Edit poll" class="hidden">Edit Poll</button>

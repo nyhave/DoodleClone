@@ -27,6 +27,7 @@ export async function createPoll(title, description, options, allowMultiple, dea
         deadline,
         reminder,
         tz,
+        comments: [],
         finalized: false,
         finalChoice: null
     };
@@ -67,5 +68,30 @@ export async function deletePoll(id) {
     if (db) {
         await db.collection('polls').doc(id).delete();
     }
+}
+
+export async function addComment(id, name, text) {
+    const poll = await getPoll(id);
+    if (!poll) return;
+    poll.comments = poll.comments || [];
+    poll.comments.push({ name, text, ts: Date.now() });
+    await savePoll(poll);
+}
+
+export function watchPoll(id, callback) {
+    if (db) {
+        return db.collection('polls').doc(id).onSnapshot(doc => {
+            if (doc.exists) {
+                const polls = loadPolls();
+                polls[id] = doc.data();
+                savePolls(polls);
+                callback(polls[id]);
+            }
+        });
+    }
+    // Fallback to localStorage only
+    const poll = loadPolls()[id] || null;
+    callback(poll);
+    return () => {};
 }
 
