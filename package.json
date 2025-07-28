@@ -1,0 +1,13 @@
+{
+  "name": "doodleclone",
+  "version": "1.0.0",
+  "description": "Polling app",
+  "type": "module",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "jsdom": "^21.0.0"
+  }
+}

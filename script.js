@@ -1,10 +1,11 @@
-(function() {
-    const STORAGE_KEY = 'doodle-polls';
-    let editingId = null;
-    let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const db = (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
+import { loadPolls, savePolls, generateId, createPoll, getPoll, savePoll, deletePoll, setDB } from "./polls.js";
+const dbInstance = (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
+setDB(dbInstance);
 
-    function formatDate(value, tz) {
+let editingId = null;
+let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function formatDate(value, tz) {
         try {
             return new Date(value).toLocaleString([], { timeZone: tz });
         } catch (e) {
@@ -23,26 +24,13 @@
         box.classList.add('hidden');
         box.textContent = '';
     }
-
-    function loadPolls() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
-    }
-
-    function savePolls(polls) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(polls));
-    }
-
-    function generateId() {
-        return Math.random().toString(36).substring(2, 10);
-    }
-
     function addOptionRow(value = '') {
         const row = document.createElement('div');
         row.className = 'option-row';
         const input = document.createElement('input');
         input.type = 'datetime-local';
         input.className = 'option-input';
+        input.setAttribute("aria-describedby", "tz-note-create");
         input.required = true;
         if (value) {
             const dt = new Date(value);
@@ -89,61 +77,10 @@
         editingId = null;
         document.querySelector('#create-section h2').textContent = 'Create Poll';
         document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
-    }
-
-    async function createPoll(title, description, options, allowMultiple, deadline, reminder, tz) {
-        const polls = loadPolls();
-        const id = generateId();
-        polls[id] = {
-            id,
-            title,
-            description,
-            options: options.map(o => ({ value: o, votes: {} })),
-            allowMultiple,
-            deadline,
-            reminder,
-            tz,
-            finalized: false,
-            finalChoice: null
-        };
-        savePolls(polls);
-        if (db) {
-            await db.collection('polls').doc(id).set(polls[id]);
-        }
-        return id;
-    }
-
-    async function getPoll(id) {
-        const polls = loadPolls();
-        if (polls[id]) return polls[id];
-        if (db) {
-            const doc = await db.collection('polls').doc(id).get();
-            if (doc.exists) {
-                polls[id] = doc.data();
-                savePolls(polls);
-                return polls[id];
-            }
-        }
+    }        return id;
+    }        }
         return null;
-    }
-
-    async function savePoll(poll) {
-        const polls = loadPolls();
-        polls[poll.id] = poll;
-        savePolls(polls);
-        if (db) {
-            await db.collection('polls').doc(poll.id).set(poll);
-        }
-    }
-
-    async function deletePoll(id) {
-        const polls = loadPolls();
-        delete polls[id];
-        savePolls(polls);
-        if (db) {
-            await db.collection('polls').doc(id).delete();
-        }
-    }
+    }    }    }
 
     async function scheduleReminder(id) {
         const poll = await getPoll(id);
@@ -415,6 +352,9 @@
 
     async function init() {
         const theme = localStorage.getItem('theme');
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("service-worker.js");
+        }
         if (theme === 'dark') {
             document.body.classList.add('dark');
         }
@@ -485,5 +425,5 @@
         }, { passive: true });
     }
 
-    init();
-})();
+
+export { init, formatDate, toIcsDate };

@@ -19,3 +19,16 @@ You can also run `jekyll build` to produce the `_site` directory and preview the
 ## Deployment
 
 Push changes to the `main` branch. GitHub Actions will automatically deploy the contents of the repository to GitHub Pages.
+
+## Testing
+
+Unit tests use Jest. Install dependencies and run:
+
+```bash
+npm install
+npm test
+```
+
+## Offline Support
+
+The site registers a service worker to cache assets so existing polls can be viewed without a network connection.
