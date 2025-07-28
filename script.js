@@ -1,4 +1,4 @@
-import { loadPolls, savePolls, generateId, createPoll, getPoll, savePoll, deletePoll, addComment, watchPoll, setDB } from "./polls.js";
+import { loadPolls, savePolls, generateId, createPoll, getPoll, savePoll, deletePoll, addComment, updateComment, deleteComment, watchPoll, setDB } from "./polls.js";
 const dbInstance = (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) ? firebase.firestore() : null;
 setDB(dbInstance);
 
@@ -98,6 +98,7 @@ function signOut() {
         row.appendChild(remove);
         document.getElementById('option-list').appendChild(row);
         updateRemoveButtons();
+
     }
 
     function updateRemoveButtons() {
@@ -200,9 +201,10 @@ function renderPollList() {
             renderPoll(poll);
             renderSummary(poll);
         };
-        const container = document.getElementById('options-container');
-        container.innerHTML = '';
-        poll.options.forEach((opt, i) => {
+       const container = document.getElementById('options-container');
+       container.innerHTML = '';
+        const term = (document.getElementById('option-search')?.value || '').toLowerCase();
+        poll.options.filter(o => formatDate(o.value, displayTz).toLowerCase().includes(term)).forEach((opt, i) => {
             const lbl = document.createElement('label');
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -319,8 +321,29 @@ function renderPollList() {
             name.textContent = c.name + ': ';
             const text = document.createElement('span');
             text.textContent = c.text;
+            const edit = document.createElement('button');
+            edit.textContent = 'Edit';
+            edit.addEventListener('click', async () => {
+                const newText = prompt('Edit comment', c.text);
+                if (newText !== null) {
+                    await updateComment(poll.id, c.ts, newText.trim());
+                    const updated = await getPoll(poll.id);
+                    renderComments(updated);
+                }
+            });
+            const del = document.createElement('button');
+            del.textContent = 'Delete';
+            del.addEventListener('click', async () => {
+                if (confirm('Delete this comment?')) {
+                    await deleteComment(poll.id, c.ts);
+                    const updated = await getPoll(poll.id);
+                    renderComments(updated);
+                }
+            });
             div.appendChild(name);
             div.appendChild(text);
+            div.appendChild(edit);
+            div.appendChild(del);
             container.appendChild(div);
         });
         container.classList.toggle('hidden', (poll.comments || []).length === 0);
@@ -341,6 +364,15 @@ function renderPollList() {
             } catch (e) {}
         });
         share.appendChild(copyBtn);
+        if (navigator.share) {
+            const nativeBtn = document.createElement('button');
+            nativeBtn.type = 'button';
+            nativeBtn.textContent = 'Share…';
+            nativeBtn.addEventListener('click', () => {
+                navigator.share({ url, title: 'Poll link' });
+            });
+            share.appendChild(nativeBtn);
+        }
         share.classList.remove('hidden');
         getPoll(id).then(poll => {
             if (poll && poll.finalized && poll.finalChoice) {
@@ -685,9 +717,19 @@ function renderPollList() {
                 renderPollList();
             });
         }
-        const searchBox = document.getElementById('poll-search');
+       const searchBox = document.getElementById('poll-search');
         if (searchBox) {
             searchBox.addEventListener('input', renderPollList);
+        }
+        const optionSearch = document.getElementById('option-search');
+        if (optionSearch) {
+            optionSearch.addEventListener('input', async () => {
+                const pollId = new URLSearchParams(location.search).get('poll');
+                if (pollId) {
+                    const poll = await getPoll(pollId);
+                    if (poll) renderPoll(poll);
+                }
+            });
         }
         const backBtn = document.getElementById('back-to-create');
         if (backBtn) {
@@ -697,6 +739,11 @@ function renderPollList() {
             });
         }
         updateRemoveButtons();
+
+        window.addEventListener('offline', () => {
+            showMessage('You are offline. Changes will sync when reconnected.');
+        });
+        window.addEventListener('online', hideMessage);
 
         if ('vibrate' in navigator) {
             document.addEventListener('click', e => {
