@@ -181,6 +181,7 @@
         document.getElementById('finalize').classList.toggle('hidden', poll.finalized);
         document.getElementById('edit').classList.toggle('hidden', poll.finalized);
         document.getElementById('delete').classList.toggle('hidden', poll.finalized);
+        document.getElementById('export-ics').classList.toggle('hidden', !poll.finalized);
         const finalBox = document.getElementById('final-choice');
         if (poll.finalized) {
             finalBox.textContent = 'Final choice: ' + formatDate(poll.finalChoice, displayTz);
@@ -254,6 +255,22 @@
         const share = document.getElementById('share');
         share.innerHTML = `<p>Share this link: <a href="?poll=${id}">${location.href.split('?')[0]}?poll=${id}</a></p>`;
         share.classList.remove('hidden');
+    }
+
+    function toIcsDate(iso) {
+        return iso.replace(/[-:]/g, '').split('.')[0] + 'Z';
+    }
+
+    function downloadIcs(poll) {
+        const start = new Date(poll.finalChoice);
+        const end = new Date(start.getTime() + 60 * 60000);
+        const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DoodleClone//EN\nBEGIN:VEVENT\nUID:${poll.id}@doodleclone\nDTSTAMP:${toIcsDate(new Date().toISOString())}\nDTSTART:${toIcsDate(start.toISOString())}\nDTEND:${toIcsDate(end.toISOString())}\nSUMMARY:${poll.title}\nDESCRIPTION:${poll.description}\nEND:VEVENT\nEND:VCALENDAR`;
+        const blob = new Blob([ics], { type: 'text/calendar' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (poll.title || 'event') + '.ics';
+        a.click();
+        URL.revokeObjectURL(a.href);
     }
 
     document.getElementById('create-form').addEventListener('submit', function(e) {
@@ -331,6 +348,7 @@
         });
         savePoll(poll);
         renderSummary(poll);
+        showMessage('Vote recorded.');
     });
 
     document.getElementById('finalize').addEventListener('click', function() {
@@ -343,6 +361,15 @@
         savePoll(poll);
         renderPoll(poll);
         renderSummary(poll);
+        showMessage('Poll finalized.');
+    });
+
+    document.getElementById('export-ics').addEventListener('click', function() {
+        const pollId = new URLSearchParams(location.search).get('poll');
+        const poll = getPoll(pollId);
+        if (poll && poll.finalized && poll.finalChoice) {
+            downloadIcs(poll);
+        }
     });
 
     document.getElementById('edit').addEventListener('click', function() {
@@ -397,6 +424,14 @@
         }
         document.getElementById('add-option').addEventListener('click', () => addOptionRow());
         updateRemoveButtons();
+
+        if ('vibrate' in navigator) {
+            document.addEventListener('click', e => {
+                if (e.target.closest('button') && window.matchMedia('(max-width: 480px)').matches) {
+                    navigator.vibrate(30);
+                }
+            });
+        }
 
         document.addEventListener('keydown', e => {
             if (e.key === 'n' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {

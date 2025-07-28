@@ -110,18 +110,19 @@ button:focus {
         width: 100%;
     }
     button {
-        padding: 12px;
-        font-size: 1.1em;
+        padding: 16px;
+        font-size: 1.2em;
     }
     input[type="checkbox"] {
-        width: 1.2em;
-        height: 1.2em;
+        width: 1.4em;
+        height: 1.4em;
     }
     #option-list .option-row {
         flex-wrap: wrap;
     }
     .remove-option {
         margin-top: 5px;
+        font-size: 1.2em;
     }
     #add-option {
         position: fixed;
