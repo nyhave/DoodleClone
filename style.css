@@ -1,13 +1,22 @@
+#root {}
+:root {
+    --bg: #f5f5f5;
+    --text: #000;
+    --card-bg: #fff;
+    --bar-bg: #e0e0ff;
+    --bar-color: #4d6df3;
+}
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 20px;
-    background-color: #f5f5f5;
+    background-color: var(--bg);
+    color: var(--text);
 }
 #app {
     max-width: 600px;
     margin: auto;
-    background: white;
+    background: var(--card-bg);
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -37,6 +46,21 @@ button {
 }
 .hidden {
     display: none;
+}
+
+body.dark {
+    --bg: #222;
+    --text: #eee;
+    --card-bg: #333;
+    --bar-bg: #555;
+    --bar-color: #9cf;
+}
+
+input:focus,
+textarea:focus,
+button:focus {
+    outline: 2px solid #4d6df3;
+    outline-offset: 2px;
 }
 #options-container label {
     display: block;
@@ -68,13 +92,13 @@ button {
 }
 .bar-container {
     flex: 1;
-    background: #e0e0ff;
+    background: var(--bar-bg);
     height: 10px;
     margin-left: 10px;
     position: relative;
 }
 .bar {
-    background: #4d6df3;
+    background: var(--bar-color);
     height: 100%;
 }
 
@@ -98,5 +122,11 @@ button {
     }
     .remove-option {
         margin-top: 5px;
+    }
+    #add-option {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        z-index: 1000;
     }
 }

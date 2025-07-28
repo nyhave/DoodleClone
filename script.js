@@ -1,6 +1,15 @@
 (function() {
     const STORAGE_KEY = 'doodle-polls';
     let editingId = null;
+    let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    function formatDate(value, tz) {
+        try {
+            return new Date(value).toLocaleString([], { timeZone: tz });
+        } catch (e) {
+            return new Date(value).toLocaleString();
+        }
+    }
 
     function showMessage(msg) {
         const box = document.getElementById('message');
@@ -81,7 +90,7 @@
         document.querySelector('#create-form button[type="submit"]').textContent = 'Create';
     }
 
-    function createPoll(title, description, options, allowMultiple) {
+    function createPoll(title, description, options, allowMultiple, deadline, reminder, tz) {
         const polls = loadPolls();
         const id = generateId();
         polls[id] = {
@@ -90,6 +99,9 @@
             description,
             options: options.map(o => ({ value: o, votes: {} })),
             allowMultiple,
+            deadline,
+            reminder,
+            tz,
             finalized: false,
             finalChoice: null
         };
@@ -114,23 +126,56 @@
         savePolls(polls);
     }
 
+    function scheduleReminder(id) {
+        const poll = getPoll(id);
+        if (!poll || !poll.deadline || !poll.reminder) return;
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        const ms = new Date(poll.deadline).getTime() - poll.reminder * 60000 - Date.now();
+        if (ms <= 0) return;
+        setTimeout(() => {
+            if (Notification.permission === 'granted') {
+                new Notification('Poll reminder', { body: `Poll "${poll.title}" closes soon.` });
+            }
+        }, ms);
+    }
+
     function renderPoll(poll) {
         document.getElementById('poll-title').textContent = poll.title;
         document.getElementById('poll-desc').textContent = poll.description;
+        document.getElementById('tz-note-view').textContent = `Poll time zone: ${poll.tz}. Displaying in ${displayTz}`;
+        const select = document.getElementById('display-tz');
+        const tzLabel = document.getElementById('display-tz-label');
+        select.innerHTML = '';
+        [displayTz, poll.tz].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            if (t === displayTz) opt.selected = true;
+            select.appendChild(opt);
+        });
+        tzLabel.classList.remove('hidden');
+        select.onchange = () => {
+            displayTz = select.value;
+            renderPoll(poll);
+            renderSummary(poll);
+        };
         const container = document.getElementById('options-container');
         container.innerHTML = '';
         poll.options.forEach((opt, i) => {
-            const label = document.createElement('label');
+            const lbl = document.createElement('label');
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = i;
             if (poll.finalized) {
                 checkbox.disabled = true;
             }
-            label.appendChild(checkbox);
-            const text = new Date(opt.value).toLocaleString();
-            label.appendChild(document.createTextNode(' ' + text));
-            container.appendChild(label);
+            lbl.appendChild(checkbox);
+            const text = formatDate(opt.value, displayTz);
+            lbl.appendChild(document.createTextNode(' ' + text));
+            container.appendChild(lbl);
         });
         document.getElementById('poll-section').classList.remove('hidden');
         document.getElementById('finalize').classList.toggle('hidden', poll.finalized);
@@ -138,11 +183,18 @@
         document.getElementById('delete').classList.toggle('hidden', poll.finalized);
         const finalBox = document.getElementById('final-choice');
         if (poll.finalized) {
-            finalBox.textContent = 'Final choice: ' + new Date(poll.finalChoice).toLocaleString();
+            finalBox.textContent = 'Final choice: ' + formatDate(poll.finalChoice, displayTz);
             finalBox.classList.remove('hidden');
         } else {
             finalBox.classList.add('hidden');
             finalBox.textContent = '';
+        }
+        if (poll.deadline) {
+            const end = new Date(poll.deadline).getTime();
+            if (Date.now() > end) {
+                document.getElementById('vote-form').classList.add('hidden');
+                showMessage('Voting closed');
+            }
         }
     }
 
@@ -155,7 +207,7 @@
             const row = document.createElement('div');
             row.className = 'summary-row';
             const label = document.createElement('span');
-            label.textContent = new Date(opt.value).toLocaleString();
+            label.textContent = formatDate(opt.value, displayTz);
             const barContainer = document.createElement('div');
             barContainer.className = 'bar-container';
             const bar = document.createElement('div');
@@ -172,10 +224,30 @@
         });
         if (poll.finalized) {
             const p = document.createElement('p');
-            p.textContent = 'Final choice: ' + new Date(poll.finalChoice).toLocaleString();
+            p.textContent = 'Final choice: ' + formatDate(poll.finalChoice, displayTz);
             summary.appendChild(p);
         }
         summary.classList.remove('hidden');
+
+        const participantsEl = document.getElementById('participants');
+        const names = Array.from(new Set(poll.options.flatMap(o => Object.keys(o.votes))));
+        participantsEl.innerHTML = '<h3>Participants</h3>';
+        names.forEach(n => {
+            const item = document.createElement('div');
+            item.textContent = n;
+            if (!poll.finalized) {
+                const btn = document.createElement('button');
+                btn.textContent = 'Remove';
+                btn.addEventListener('click', () => {
+                    poll.options.forEach(o => delete o.votes[n]);
+                    savePoll(poll);
+                    renderSummary(poll);
+                });
+                item.appendChild(btn);
+            }
+            participantsEl.appendChild(item);
+        });
+        participantsEl.classList.toggle('hidden', names.length === 0);
     }
 
     function showShareLink(id) {
@@ -193,6 +265,10 @@
         options = options.map(v => new Date(v).toISOString());
         options = Array.from(new Set(options));
         const allowMultiple = document.getElementById('allow-multiple').checked;
+        const deadlineInput = document.getElementById('deadline').value;
+        const deadline = deadlineInput ? new Date(deadlineInput).toISOString() : null;
+        const reminder = parseInt(document.getElementById('reminder').value) || null;
+        const pollTz = document.getElementById('poll-tz').value || Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (!title || options.length === 0) {
             showMessage('Please provide a title and at least one unique option.');
             return;
@@ -208,9 +284,14 @@
             poll.description = desc;
             poll.options = newOptions;
             poll.allowMultiple = allowMultiple;
+            poll.deadline = deadline;
+            poll.reminder = reminder;
+            poll.tz = pollTz;
             savePoll(poll);
+            scheduleReminder(poll.id);
         } else {
-            id = createPoll(title, desc, options, allowMultiple);
+            id = createPoll(title, desc, options, allowMultiple, deadline, reminder, pollTz);
+            scheduleReminder(id);
         }
         history.replaceState({}, '', '?poll=' + id);
         document.getElementById('create-section').classList.add('hidden');
@@ -232,6 +313,10 @@
             showMessage('This poll has been finalized.');
             return;
         }
+        if (poll.deadline && Date.now() > new Date(poll.deadline).getTime()) {
+            showMessage('Voting closed.');
+            return;
+        }
         let checked = Array.from(document.querySelectorAll('#options-container input:checked')).map(el => parseInt(el.value));
         if (checked.length === 0) {
             showMessage('Please select at least one option.');
@@ -240,6 +325,7 @@
         if (!poll.allowMultiple) {
             checked = [checked[0]];
         }
+        poll.options.forEach(opt => delete opt.votes[name]);
         checked.forEach(idx => {
             poll.options[idx].votes[name] = true;
         });
@@ -282,6 +368,15 @@
     });
 
     function init() {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+            document.body.classList.add('dark');
+        }
+        document.getElementById('toggle-theme').addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+        });
+
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         document.querySelectorAll('.tz-note').forEach(el => {
             el.textContent = 'Times shown in your local time zone: ' + tz;
@@ -295,12 +390,22 @@
                 renderPoll(poll);
                 renderSummary(poll);
                 showShareLink(pollId);
+                scheduleReminder(pollId);
             } else {
                 showMessage('Poll not found. It may have expired or been created on another device.');
             }
         }
         document.getElementById('add-option').addEventListener('click', () => addOptionRow());
         updateRemoveButtons();
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'n' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+                document.getElementById('add-option').click();
+            }
+            if (e.key === 'd' && e.ctrlKey) {
+                document.getElementById('toggle-theme').click();
+            }
+        });
     }
 
     init();

@@ -9,7 +9,8 @@
 <body>
     <div id="app">
         <h1>DoodleClone</h1>
-        <div id="message" class="hidden"></div>
+        <button id="toggle-theme" aria-label="Toggle dark mode">🌙</button>
+        <div id="message" role="alert" aria-live="polite" class="hidden"></div>
         <section id="create-section">
             <h2>Create Poll</h2>
             <p id="tz-note-create" class="tz-note"></p>
@@ -28,9 +29,27 @@
                         <button type="button" class="remove-option hidden">✕</button>
                     </div>
                 </div>
-                <button type="button" id="add-option">Add Option</button>
+                <button type="button" id="add-option" aria-label="Add option">Add Option</button>
                 <label>
                     <input type="checkbox" id="allow-multiple"> Allow multiple selections
+                </label>
+                <label>
+                    Deadline:
+                    <input type="datetime-local" id="deadline">
+                </label>
+                <label>
+                    Reminder minutes before deadline:
+                    <input type="number" id="reminder" min="1" placeholder="e.g. 60">
+                </label>
+                <label>
+                    Poll time zone:
+                    <select id="poll-tz">
+                        <option value="">Local</option>
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo</option>
+                    </select>
                 </label>
                 <button type="submit">Create</button>
             </form>
@@ -39,6 +58,10 @@
             <h2 id="poll-title"></h2>
             <p id="poll-desc"></p>
             <p id="tz-note-view" class="tz-note"></p>
+            <label id="display-tz-label" class="hidden">
+                Display times in:
+                <select id="display-tz"></select>
+            </label>
             <form id="vote-form">
                 <div id="options-container"></div>
                 <label>
@@ -48,6 +71,7 @@
                 <button type="submit">Submit Vote</button>
             </form>
             <div id="summary" class="hidden"></div>
+            <div id="participants" class="hidden"></div>
             <div id="final-choice" class="hidden"></div>
             <button id="finalize" class="hidden">Finalize Poll</button>
             <button id="edit" class="hidden">Edit Poll</button>
