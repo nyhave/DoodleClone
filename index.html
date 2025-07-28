@@ -21,10 +21,13 @@
                     Description:
                     <textarea id="description"></textarea>
                 </label>
-                <label>
-                    Proposed Dates (comma separated):
-                    <input type="text" id="options" placeholder="2024-01-01 10:00, 2024-01-02 15:00" required>
-                </label>
+                <div id="option-list">
+                    <div class="option-row">
+                        <input type="datetime-local" class="option-input" required>
+                        <button type="button" class="remove-option hidden">✕</button>
+                    </div>
+                </div>
+                <button type="button" id="add-option">Add Option</button>
                 <label>
                     <input type="checkbox" id="allow-multiple"> Allow multiple selections
                 </label>

@@ -6,7 +6,11 @@ A minimal Doodle-like polling app built with HTML, CSS and JavaScript. Polls are
 
 Open `index.html` in a browser to test locally. Creating a poll generates a shareable link with a unique identifier in the URL.
 
-Polls now support optional multiple selections and can be finalized once a consensus is reached. If a shared link is opened on a different device and the poll does not exist locally, a message will be shown.
+Polls now support optional multiple selections and can be finalized once a consensus is reached. Options are entered with date/time pickers so each value is stored in ISO format with time zone support. After voting, results are displayed with small bars showing the relative popularity of each option.
+
+If a shared link is opened on a different device and the poll does not exist locally, a clearer message is displayed explaining that the poll may have expired or been created elsewhere.
+
+The mobile layout has been tweaked so form controls and buttons span the available width on small screens.
 
 You can also run `jekyll build` to produce the `_site` directory and preview the site exactly as it will appear on GitHub Pages.
 

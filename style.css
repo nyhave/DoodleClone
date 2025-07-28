@@ -19,6 +19,7 @@ label {
     margin-bottom: 10px;
 }
 input[type="text"],
+input[type="datetime-local"],
 textarea {
     width: 100%;
     padding: 8px;
@@ -45,4 +46,44 @@ button {
     padding: 10px;
     margin-bottom: 10px;
     border: 1px solid #ffb0b0;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.remove-option {
+    margin-left: 8px;
+}
+.summary-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.bar-container {
+    flex: 1;
+    background: #e0e0ff;
+    height: 10px;
+    margin-left: 10px;
+    position: relative;
+}
+.bar {
+    background: #4d6df3;
+    height: 100%;
+}
+
+@media (max-width: 480px) {
+    button,
+    input[type="text"],
+    input[type="datetime-local"],
+    textarea {
+        width: 100%;
+    }
+    #option-list .option-row {
+        flex-wrap: wrap;
+    }
+    .remove-option {
+        margin-top: 5px;
+    }
 }
