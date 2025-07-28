@@ -9,6 +9,29 @@ let lastCommentTs = 0;
 let lastVoteCount = 0;
 let deferredPrompt = null;
 
+function captureConsole() {
+    const container = document.getElementById('console-log');
+    const wrapper = document.getElementById('console-output');
+    if (!container || !wrapper) return;
+    const origLog = console.log.bind(console);
+    const origErr = console.error.bind(console);
+    function append(type, args) {
+        const msg = Array.from(args).map(a => {
+            if (typeof a === 'object') {
+                try { return JSON.stringify(a); } catch { return String(a); }
+            }
+            return String(a);
+        }).join(' ');
+        const div = document.createElement('div');
+        if (type === 'error') div.classList.add('error');
+        div.textContent = msg;
+        container.appendChild(div);
+        wrapper.classList.remove('hidden');
+    }
+    console.log = (...args) => { origLog(...args); append('log', args); };
+    console.error = (...args) => { origErr(...args); append('error', args); };
+}
+
 function formatDate(value, tz) {
         try {
             return new Date(value).toLocaleString([], { timeZone: tz });
@@ -579,6 +602,7 @@ function renderPollList() {
     });
 
     async function init() {
+        captureConsole();
         const savedTheme = localStorage.getItem('theme') || 'system';
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
