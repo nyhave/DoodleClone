@@ -10,6 +10,14 @@
     <div id="app">
         <h1>DoodleClone</h1>
         <button id="toggle-theme" aria-label="Toggle dark mode">🌙</button>
+        <div id="sign-in-options" class="hidden">
+            <button type="button" id="google-signin" class="signin-option">Google</button>
+            <button type="button" id="github-signin" class="signin-option">GitHub</button>
+        </div>
+        <span id="user-info" class="hidden">
+            <img id="user-pic" alt="" class="hidden">
+            <span id="user-name"></span>
+        </span>
         <button id="auth-btn">Sign in</button>
         <button id="show-manage">My Polls</button>
         <div id="message" role="alert" aria-live="polite" class="hidden"></div>
@@ -94,6 +102,7 @@
                 <button type="submit">Post Comment</button>
             </form>
             <button id="export-ics" aria-label="Add event to calendar" class="hidden">Add to Calendar</button>
+            <a id="calendar-feed" class="hidden" aria-label="Subscribe to calendar" download>Subscribe</a>
             <button id="finalize" aria-label="Finalize poll" class="hidden">Finalize Poll</button>
             <button id="edit" aria-label="Edit poll" class="hidden">Edit Poll</button>
             <button id="delete" aria-label="Delete poll" class="hidden">Delete Poll</button>
