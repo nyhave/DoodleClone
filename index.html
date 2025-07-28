@@ -131,7 +131,11 @@
     <script src="firebase-config.js"></script>
     <script type="module">
 import { init } from "./script.js";
-document.addEventListener("DOMContentLoaded", init);
+if (document.readyState !== 'loading') {
+    init();
+} else {
+    document.addEventListener("DOMContentLoaded", init);
+}
 </script>
 </body>
 </html>
