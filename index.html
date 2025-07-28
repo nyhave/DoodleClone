@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DoodleClone</title>
+    <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,12 +14,14 @@
         <div id="sign-in-options" class="hidden">
             <button type="button" id="google-signin" class="signin-option">Google</button>
             <button type="button" id="github-signin" class="signin-option">GitHub</button>
+            <button type="button" id="guest-signin" class="signin-option">Guest</button>
         </div>
         <span id="user-info" class="hidden">
             <img id="user-pic" alt="" class="hidden">
             <span id="user-name"></span>
         </span>
         <button id="auth-btn">Sign in</button>
+        <button id="install-btn" class="hidden">Install App</button>
         <button id="show-manage">My Polls</button>
         <div id="message" role="alert" aria-live="polite" class="hidden"></div>
         <section id="create-section">
@@ -51,6 +54,14 @@
                 <label>
                     Reminder minutes before deadline:
                     <input type="number" id="reminder" min="1" placeholder="e.g. 60">
+                </label>
+                <label>
+                    Event length (minutes):
+                    <input type="number" id="duration" min="1" placeholder="60">
+                </label>
+                <label>
+                    Location:
+                    <input type="text" id="location">
                 </label>
                 <label>
                     Poll time zone:

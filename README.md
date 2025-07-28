@@ -32,3 +32,5 @@ npm test
 ## Offline Support
 
 The site registers a service worker to cache assets so existing polls can be viewed without a network connection.
+
+Polls now include optional event duration and location fields which are used when generating downloadable ICS files. The share box offers a convenient "Copy link" button, and the site provides an install prompt so it can be added to your home screen as a PWA. Calendar feeds work offline if the poll has been viewed before.

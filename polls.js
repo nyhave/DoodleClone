@@ -15,7 +15,7 @@ export function generateId() {
     return Math.random().toString(36).substring(2, 10);
 }
 
-export async function createPoll(title, description, options, allowMultiple, deadline, reminder, tz) {
+export async function createPoll(title, description, options, allowMultiple, deadline, reminder, tz, duration, location) {
     const polls = loadPolls();
     const id = generateId();
     polls[id] = {
@@ -30,6 +30,8 @@ export async function createPoll(title, description, options, allowMultiple, dea
         comments: [],
         finalized: false,
         finalChoice: null,
+        duration,
+        location,
         createdAt: Date.now()
     };
     savePolls(polls);

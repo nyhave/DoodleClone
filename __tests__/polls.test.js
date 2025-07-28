@@ -24,14 +24,14 @@ describe('poll storage', () => {
   });
 
   test('create and fetch poll', async () => {
-    const id = await createPoll('t', 'd', ['a'], false, null, null, 'UTC');
+    const id = await createPoll('t', 'd', ['a'], false, null, null, 'UTC', 60, '');
     const poll = await getPoll(id);
     expect(poll.title).toBe('t');
     expect(fakeData[id]).toBeDefined();
   });
 
   test('save and delete poll', async () => {
-    const id = await createPoll('x', 'y', ['a'], false, null, null, 'UTC');
+    const id = await createPoll('x', 'y', ['a'], false, null, null, 'UTC', 60, '');
     const poll = await getPoll(id);
     poll.title = 'z';
     await savePoll(poll);
