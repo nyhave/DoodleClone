@@ -436,7 +436,13 @@ function renderPollList() {
         const title = document.getElementById('title').value.trim();
         const desc = document.getElementById('description').value.trim();
         let options = Array.from(document.querySelectorAll('.option-input')).map(i => i.value).filter(Boolean);
-        options = options.map(v => new Date(v).toISOString());
+        try {
+            options = options.map(v => new Date(v).toISOString());
+        } catch (err) {
+            console.error('Invalid date value', err);
+            showMessage('One or more option dates are invalid.');
+            return;
+        }
         options = Array.from(new Set(options));
         const allowMultiple = document.getElementById('allow-multiple').checked;
         const deadlineInput = document.getElementById('deadline').value;
@@ -474,6 +480,10 @@ function renderPollList() {
         history.replaceState({}, '', '?poll=' + id);
         document.getElementById('create-section').classList.add('hidden');
         const poll = await getPoll(id);
+        if (!poll) {
+            showMessage('Unable to save poll. Your browser may be blocking local storage.');
+            return;
+        }
         renderPoll(poll);
         renderSummary(poll);
         renderComments(poll);

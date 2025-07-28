@@ -3,12 +3,23 @@ export let db = null;
 export function setDB(database) { db = database; }
 
 export function loadPolls() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        console.error('Failed to load polls from storage', e);
+        return {};
+    }
 }
 
 export function savePolls(polls) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(polls));
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(polls));
+        return true;
+    } catch (e) {
+        console.error('Failed to save polls to storage', e);
+        return false;
+    }
 }
 
 export function generateId() {
