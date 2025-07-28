@@ -146,3 +146,7 @@ button:focus {
 #poll-section.show-summary #summary {
     display: block;
 }
+
+#comments div {
+    margin-bottom: 5px;
+}
