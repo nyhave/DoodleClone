@@ -1,10 +1,18 @@
 # DoodleClone
 
-A minimal Doodle-like polling app built with HTML, CSS and JavaScript. Polls are kept in each browser's `localStorage` so links only work on the device where they were created. The app can be deployed as a static site using GitHub Pages.
+A minimal Doodle-like polling app built with HTML, CSS and JavaScript. Polls are
+stored in each browser's `localStorage` for offline support and can optionally be
+synced to Firestore. When a `firebase-config.js` file is present, polls are written
+to your Firebase project so links work across devices. The app can be deployed as
+a static site using GitHub Pages.
 
 ## Development
 
 Open `index.html` in a browser to test locally. Creating a poll generates a shareable link with a unique identifier in the URL.
+
+To enable Firestore syncing, copy `firebase-config.example.js` to
+`firebase-config.js` and fill in your Firebase project details. Without this file
+polls remain only in `localStorage`.
 
 Polls now support optional multiple selections and can be finalized once a consensus is reached. Options are entered with date/time pickers so each value is stored in ISO format with time zone support. After voting, results are displayed with small bars showing the relative popularity of each option.
 
