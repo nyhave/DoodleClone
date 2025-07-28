@@ -26,6 +26,39 @@
         return Math.random().toString(36).substring(2, 10);
     }
 
+    function addOptionRow(value = '') {
+        const row = document.createElement('div');
+        row.className = 'option-row';
+        const input = document.createElement('input');
+        input.type = 'datetime-local';
+        input.className = 'option-input';
+        input.required = true;
+        if (value) {
+            const dt = new Date(value);
+            input.value = dt.toISOString().slice(0,16);
+        }
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'remove-option';
+        remove.textContent = '✕';
+        remove.addEventListener('click', () => {
+            row.remove();
+            updateRemoveButtons();
+        });
+        row.appendChild(input);
+        row.appendChild(remove);
+        document.getElementById('option-list').appendChild(row);
+        updateRemoveButtons();
+    }
+
+    function updateRemoveButtons() {
+        const rows = document.querySelectorAll('#option-list .option-row');
+        rows.forEach(r => {
+            const btn = r.querySelector('.remove-option');
+            if (btn) btn.classList.toggle('hidden', rows.length === 1);
+        });
+    }
+
     function createPoll(title, description, options, allowMultiple) {
         const polls = loadPolls();
         const id = generateId();
@@ -67,14 +100,15 @@
                 checkbox.disabled = true;
             }
             label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(' ' + opt.value));
+            const text = new Date(opt.value).toLocaleString();
+            label.appendChild(document.createTextNode(' ' + text));
             container.appendChild(label);
         });
         document.getElementById('poll-section').classList.remove('hidden');
         document.getElementById('finalize').classList.toggle('hidden', poll.finalized);
         const finalBox = document.getElementById('final-choice');
         if (poll.finalized) {
-            finalBox.textContent = 'Final choice: ' + poll.finalChoice;
+            finalBox.textContent = 'Final choice: ' + new Date(poll.finalChoice).toLocaleString();
             finalBox.classList.remove('hidden');
         } else {
             finalBox.classList.add('hidden');
@@ -85,14 +119,30 @@
     function renderSummary(poll) {
         const summary = document.getElementById('summary');
         summary.innerHTML = '<h3>Current votes</h3>';
+        const counts = poll.options.map(o => Object.keys(o.votes).length);
+        const max = Math.max(1, ...counts);
         poll.options.forEach(opt => {
-            const p = document.createElement('p');
-            p.textContent = `${opt.value}: ${Object.keys(opt.votes).length} votes`;
-            summary.appendChild(p);
+            const row = document.createElement('div');
+            row.className = 'summary-row';
+            const label = document.createElement('span');
+            label.textContent = new Date(opt.value).toLocaleString();
+            const barContainer = document.createElement('div');
+            barContainer.className = 'bar-container';
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            const count = Object.keys(opt.votes).length;
+            bar.style.width = (count / max * 100) + '%';
+            barContainer.appendChild(bar);
+            const countSpan = document.createElement('span');
+            countSpan.textContent = ' ' + count;
+            row.appendChild(label);
+            row.appendChild(barContainer);
+            row.appendChild(countSpan);
+            summary.appendChild(row);
         });
         if (poll.finalized) {
             const p = document.createElement('p');
-            p.textContent = 'Final choice: ' + poll.finalChoice;
+            p.textContent = 'Final choice: ' + new Date(poll.finalChoice).toLocaleString();
             summary.appendChild(p);
         }
         summary.classList.remove('hidden');
@@ -109,9 +159,10 @@
         hideMessage();
         const title = document.getElementById('title').value.trim();
         const desc = document.getElementById('description').value.trim();
-        let options = document.getElementById('options').value.split(',').map(o => o.trim()).filter(Boolean);
-        const allowMultiple = document.getElementById('allow-multiple').checked;
+        let options = Array.from(document.querySelectorAll('.option-input')).map(i => i.value).filter(Boolean);
+        options = options.map(v => new Date(v).toISOString());
         options = Array.from(new Set(options));
+        const allowMultiple = document.getElementById('allow-multiple').checked;
         if (!title || options.length === 0) {
             showMessage('Please provide a title and at least one unique option.');
             return;
@@ -173,9 +224,11 @@
                 renderSummary(poll);
                 showShareLink(pollId);
             } else {
-                showMessage('Poll not found on this device.');
+                showMessage('Poll not found. It may have expired or been created on another device.');
             }
         }
+        document.getElementById('add-option').addEventListener('click', () => addOptionRow());
+        updateRemoveButtons();
     }
 
     init();
