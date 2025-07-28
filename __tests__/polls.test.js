@@ -1,4 +1,4 @@
-import { setDB, createPoll, getPoll, savePoll, deletePoll, generateId } from '../polls.js';
+import { setDB, createPoll, getPoll, savePoll, deletePoll, generateId, loadPolls } from '../polls.js';
 
 const fakeData = {};
 const fakeDb = {
@@ -40,6 +40,14 @@ describe('poll storage', () => {
     await deletePoll(id);
     const deleted = await getPoll(id);
     expect(deleted).toBeNull();
+  });
+
+  test('loadPolls handles storage errors', () => {
+    const orig = localStorage.getItem;
+    localStorage.getItem = () => { throw new Error('fail'); };
+    const polls = loadPolls();
+    expect(polls).toEqual({});
+    localStorage.getItem = orig;
   });
 });
 
