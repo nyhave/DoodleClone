@@ -182,3 +182,20 @@ button:focus {
     justify-content: space-between;
     margin-bottom: 5px;
 }
+
+#console-output {
+    background: #fafafa;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-top: 15px;
+    max-height: 200px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+body.dark #console-output {
+    background: #444;
+    color: #eee;
+}
+#console-output .error {
+    color: red;
+}
