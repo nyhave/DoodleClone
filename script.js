@@ -7,6 +7,7 @@ let displayTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 let currentUser = null;
 let lastCommentTs = 0;
 let lastVoteCount = 0;
+let deferredPrompt = null;
 
 function formatDate(value, tz) {
         try {
@@ -60,10 +61,13 @@ function signIn(type = 'google') {
     let provider;
     if (type === 'github') {
         provider = new firebase.auth.GithubAuthProvider();
+        firebase.auth().signInWithPopup(provider);
+    } else if (type === 'guest') {
+        firebase.auth().signInAnonymously();
     } else {
         provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider);
     }
-    firebase.auth().signInWithPopup(provider);
 }
 
 function signOut() {
@@ -324,8 +328,25 @@ function renderPollList() {
 
     function showShareLink(id) {
         const share = document.getElementById('share');
-        share.innerHTML = `<p>Share this link: <a href="?poll=${id}">${location.href.split('?')[0]}?poll=${id}</a></p>`;
+        const url = `${location.href.split('?')[0]}?poll=${id}`;
+        share.innerHTML = `<p>Share this link: <a href="?poll=${id}">${url}</a></p>`;
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Copy link';
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(url);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 2000);
+            } catch (e) {}
+        });
+        share.appendChild(copyBtn);
         share.classList.remove('hidden');
+        getPoll(id).then(poll => {
+            if (poll && poll.finalized && poll.finalChoice) {
+                cacheIcs(poll);
+            }
+        });
     }
 
     function toIcsDate(iso) {
@@ -334,8 +355,10 @@ function renderPollList() {
 
     function generateIcs(poll) {
         const start = new Date(poll.finalChoice);
-        const end = new Date(start.getTime() + 60 * 60000);
-        return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DoodleClone//EN\nBEGIN:VEVENT\nUID:${poll.id}@doodleclone\nDTSTAMP:${toIcsDate(new Date().toISOString())}\nDTSTART:${toIcsDate(start.toISOString())}\nDTEND:${toIcsDate(end.toISOString())}\nSUMMARY:${poll.title}\nDESCRIPTION:${poll.description}\nEND:VEVENT\nEND:VCALENDAR`;
+        const dur = parseInt(poll.duration || 60);
+        const end = new Date(start.getTime() + dur * 60000);
+        const location = poll.location ? `\nLOCATION:${poll.location}` : '';
+        return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DoodleClone//EN\nBEGIN:VEVENT\nUID:${poll.id}@doodleclone\nDTSTAMP:${toIcsDate(new Date().toISOString())}\nDTSTART:${toIcsDate(start.toISOString())}\nDTEND:${toIcsDate(end.toISOString())}\nSUMMARY:${poll.title}\nDESCRIPTION:${poll.description}${location}\nEND:VEVENT\nEND:VCALENDAR`;
     }
 
     function countVotes(poll) {
@@ -350,16 +373,29 @@ function renderPollList() {
         a.download = (poll.title || 'event') + '.ics';
         a.click();
         URL.revokeObjectURL(a.href);
+        cacheIcs(poll, ics);
+    }
+
+    function cacheIcs(poll, ics) {
+        if (!('serviceWorker' in navigator)) return;
+        if (!ics) ics = generateIcs(poll);
+        navigator.serviceWorker.ready.then(reg => {
+            if (reg.active) {
+                reg.active.postMessage({ type: 'cache-ics', id: poll.id, ics });
+            }
+        });
     }
 
     function googleCalUrl(poll) {
         const start = new Date(poll.finalChoice);
-        const end = new Date(start.getTime() + 60 * 60000);
+        const dur = parseInt(poll.duration || 60);
+        const end = new Date(start.getTime() + dur * 60000);
         const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
         const text = '&text=' + encodeURIComponent(poll.title);
         const dates = '&dates=' + toIcsDate(start.toISOString()) + '/' + toIcsDate(end.toISOString());
         const details = '&details=' + encodeURIComponent(poll.description);
-        return base + text + dates + details;
+        const location = poll.location ? '&location=' + encodeURIComponent(poll.location) : '';
+        return base + text + dates + details + location;
     }
 
     document.getElementById('create-form').addEventListener('submit', async function(e) {
@@ -375,6 +411,8 @@ function renderPollList() {
         const deadline = deadlineInput ? new Date(deadlineInput).toISOString() : null;
         const reminder = parseInt(document.getElementById('reminder').value) || null;
         const pollTz = document.getElementById('poll-tz').value || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const duration = parseInt(document.getElementById('duration').value) || 60;
+        const locationVal = document.getElementById('location').value.trim();
         if (!title || options.length === 0) {
             showMessage('Please provide a title and at least one unique option.');
             return;
@@ -393,10 +431,12 @@ function renderPollList() {
             poll.deadline = deadline;
             poll.reminder = reminder;
             poll.tz = pollTz;
+            poll.duration = duration;
+            poll.location = locationVal;
             await savePoll(poll);
             await scheduleReminder(poll.id);
         } else {
-            id = await createPoll(title, desc, options, allowMultiple, deadline, reminder, pollTz);
+            id = await createPoll(title, desc, options, allowMultiple, deadline, reminder, pollTz, duration, locationVal);
             await scheduleReminder(id);
         }
         history.replaceState({}, '', '?poll=' + id);
@@ -449,6 +489,7 @@ function renderPollList() {
         poll.finalized = true;
         poll.finalChoice = best.value;
         await savePoll(poll);
+        cacheIcs(poll);
         renderPoll(poll);
         renderSummary(poll);
         renderComments(poll);
@@ -500,6 +541,22 @@ function renderPollList() {
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
         }
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('install-btn');
+            if (btn) btn.classList.remove('hidden');
+        });
+        const installBtn = document.getElementById('install-btn');
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                installBtn.classList.add('hidden');
+                deferredPrompt = null;
+            });
+        }
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
         function applyTheme(th) {
             if (th === 'dark') {
@@ -542,6 +599,8 @@ function renderPollList() {
             if (googleBtn) googleBtn.addEventListener('click', () => signIn('google'));
             const githubBtn = document.getElementById('github-signin');
             if (githubBtn) githubBtn.addEventListener('click', () => signIn('github'));
+            const guestBtn = document.getElementById('guest-signin');
+            if (guestBtn) guestBtn.addEventListener('click', () => signIn('guest'));
             const authBtn = document.getElementById('auth-btn');
             if (authBtn) {
                 authBtn.addEventListener('click', () => {
