@@ -12,6 +12,7 @@
         <div id="message" class="hidden"></div>
         <section id="create-section">
             <h2>Create Poll</h2>
+            <p id="tz-note-create" class="tz-note"></p>
             <form id="create-form">
                 <label>
                     Title:
@@ -37,6 +38,7 @@
         <section id="poll-section" class="hidden">
             <h2 id="poll-title"></h2>
             <p id="poll-desc"></p>
+            <p id="tz-note-view" class="tz-note"></p>
             <form id="vote-form">
                 <div id="options-container"></div>
                 <label>
@@ -48,6 +50,8 @@
             <div id="summary" class="hidden"></div>
             <div id="final-choice" class="hidden"></div>
             <button id="finalize" class="hidden">Finalize Poll</button>
+            <button id="edit" class="hidden">Edit Poll</button>
+            <button id="delete" class="hidden">Delete Poll</button>
         </section>
         <div id="share" class="hidden"></div>
     </div>
