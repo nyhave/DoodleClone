@@ -81,6 +81,23 @@ export async function addComment(id, name, text) {
     await savePoll(poll);
 }
 
+export async function updateComment(id, ts, newText) {
+    const poll = await getPoll(id);
+    if (!poll || !poll.comments) return;
+    const comment = poll.comments.find(c => c.ts === ts);
+    if (comment) {
+        comment.text = newText;
+        await savePoll(poll);
+    }
+}
+
+export async function deleteComment(id, ts) {
+    const poll = await getPoll(id);
+    if (!poll || !poll.comments) return;
+    poll.comments = poll.comments.filter(c => c.ts !== ts);
+    await savePoll(poll);
+}
+
 export function watchPoll(id, callback) {
     if (db) {
         return db.collection('polls').doc(id).onSnapshot(doc => {

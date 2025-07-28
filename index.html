@@ -91,6 +91,7 @@
                 <select id="display-tz"></select>
             </label>
             <form id="vote-form">
+                <input type="text" id="option-search" aria-label="Filter options" placeholder="Filter options">
                 <div id="options-container"></div>
                 <label>
                     Your name:
@@ -101,7 +102,7 @@
             <div id="summary" class="hidden"></div>
             <div id="participants" class="hidden"></div>
             <div id="final-choice" class="hidden"></div>
-            <div id="comments" class="hidden"></div>
+            <div id="comments" class="hidden" aria-live="polite"></div>
             <form id="comment-form">
                 <label>
                     Name:
