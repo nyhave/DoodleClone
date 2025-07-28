@@ -1,6 +1,18 @@
 (function() {
     const STORAGE_KEY = 'doodle-polls';
 
+    function showMessage(msg) {
+        const box = document.getElementById('message');
+        box.textContent = msg;
+        box.classList.remove('hidden');
+    }
+
+    function hideMessage() {
+        const box = document.getElementById('message');
+        box.classList.add('hidden');
+        box.textContent = '';
+    }
+
     function loadPolls() {
         const raw = localStorage.getItem(STORAGE_KEY);
         return raw ? JSON.parse(raw) : {};
@@ -14,7 +26,7 @@
         return Math.random().toString(36).substring(2, 10);
     }
 
-    function createPoll(title, description, options) {
+    function createPoll(title, description, options, allowMultiple) {
         const polls = loadPolls();
         const id = generateId();
         polls[id] = {
@@ -22,6 +34,7 @@
             title,
             description,
             options: options.map(o => ({ value: o, votes: {} })),
+            allowMultiple,
             finalized: false,
             finalChoice: null
         };
@@ -50,11 +63,23 @@
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = i;
+            if (poll.finalized) {
+                checkbox.disabled = true;
+            }
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(' ' + opt.value));
             container.appendChild(label);
         });
         document.getElementById('poll-section').classList.remove('hidden');
+        document.getElementById('finalize').classList.toggle('hidden', poll.finalized);
+        const finalBox = document.getElementById('final-choice');
+        if (poll.finalized) {
+            finalBox.textContent = 'Final choice: ' + poll.finalChoice;
+            finalBox.classList.remove('hidden');
+        } else {
+            finalBox.classList.add('hidden');
+            finalBox.textContent = '';
+        }
     }
 
     function renderSummary(poll) {
@@ -65,6 +90,11 @@
             p.textContent = `${opt.value}: ${Object.keys(opt.votes).length} votes`;
             summary.appendChild(p);
         });
+        if (poll.finalized) {
+            const p = document.createElement('p');
+            p.textContent = 'Final choice: ' + poll.finalChoice;
+            summary.appendChild(p);
+        }
         summary.classList.remove('hidden');
     }
 
@@ -76,11 +106,17 @@
 
     document.getElementById('create-form').addEventListener('submit', function(e) {
         e.preventDefault();
+        hideMessage();
         const title = document.getElementById('title').value.trim();
         const desc = document.getElementById('description').value.trim();
-        const options = document.getElementById('options').value.split(',').map(o => o.trim()).filter(Boolean);
-        if (!title || options.length === 0) return;
-        const id = createPoll(title, desc, options);
+        let options = document.getElementById('options').value.split(',').map(o => o.trim()).filter(Boolean);
+        const allowMultiple = document.getElementById('allow-multiple').checked;
+        options = Array.from(new Set(options));
+        if (!title || options.length === 0) {
+            showMessage('Please provide a title and at least one unique option.');
+            return;
+        }
+        const id = createPoll(title, desc, options, allowMultiple);
         history.replaceState({}, '', '?poll=' + id);
         document.getElementById('create-section').classList.add('hidden');
         const poll = getPoll(id);
@@ -90,11 +126,23 @@
 
     document.getElementById('vote-form').addEventListener('submit', function(e) {
         e.preventDefault();
+        hideMessage();
         const pollId = new URLSearchParams(location.search).get('poll');
         const poll = getPoll(pollId);
         const name = document.getElementById('participant').value.trim();
         if (!poll || !name) return;
-        const checked = Array.from(document.querySelectorAll('#options-container input:checked')).map(el => parseInt(el.value));
+        if (poll.finalized) {
+            showMessage('This poll has been finalized.');
+            return;
+        }
+        let checked = Array.from(document.querySelectorAll('#options-container input:checked')).map(el => parseInt(el.value));
+        if (checked.length === 0) {
+            showMessage('Please select at least one option.');
+            return;
+        }
+        if (!poll.allowMultiple) {
+            checked = [checked[0]];
+        }
         checked.forEach(idx => {
             poll.options[idx].votes[name] = true;
         });
@@ -110,7 +158,7 @@
         poll.finalized = true;
         poll.finalChoice = best.value;
         savePoll(poll);
-        alert('Poll finalized at: ' + best.value);
+        renderPoll(poll);
         renderSummary(poll);
     });
 
@@ -123,8 +171,9 @@
             if (poll) {
                 renderPoll(poll);
                 renderSummary(poll);
-                document.getElementById('finalize').classList.remove('hidden');
                 showShareLink(pollId);
+            } else {
+                showMessage('Poll not found on this device.');
             }
         }
     }
