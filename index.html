@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoodleClone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <h1>DoodleClone</h1>
+        <section id="create-section">
+            <h2>Create Poll</h2>
+            <form id="create-form">
+                <label>
+                    Title:
+                    <input type="text" id="title" required>
+                </label>
+                <label>
+                    Description:
+                    <textarea id="description"></textarea>
+                </label>
+                <label>
+                    Proposed Dates (comma separated):
+                    <input type="text" id="options" placeholder="2024-01-01 10:00, 2024-01-02 15:00" required>
+                </label>
+                <button type="submit">Create</button>
+            </form>
+        </section>
+        <section id="poll-section" class="hidden">
+            <h2 id="poll-title"></h2>
+            <p id="poll-desc"></p>
+            <form id="vote-form">
+                <div id="options-container"></div>
+                <label>
+                    Your name:
+                    <input type="text" id="participant" required>
+                </label>
+                <button type="submit">Submit Vote</button>
+            </form>
+            <div id="summary" class="hidden"></div>
+            <button id="finalize" class="hidden">Finalize Poll</button>
+        </section>
+        <div id="share" class="hidden"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
