@@ -1,145 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DoodleClone</title>
-    <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doodle Clone Mockup</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="app">
-        <h1>DoodleClone</h1>
-        <button id="toggle-theme" aria-label="Toggle dark mode">🌙</button>
-        <div id="sign-in-options" class="hidden">
-            <button type="button" id="google-signin" class="signin-option">Google</button>
-            <button type="button" id="github-signin" class="signin-option">GitHub</button>
-            <button type="button" id="guest-signin" class="signin-option">Guest</button>
-        </div>
-        <span id="user-info" class="hidden">
-            <img id="user-pic" alt="" class="hidden">
-            <span id="user-name"></span>
-        </span>
-        <button id="auth-btn">Sign in</button>
-        <button id="install-btn" class="hidden">Install App</button>
-        <button id="show-manage">My Polls</button>
-        <div id="message" role="alert" aria-live="polite" class="hidden"></div>
-        <section id="create-section">
-            <h2>Create Poll</h2>
-            <p id="tz-note-create" class="tz-note"></p>
-            <form id="create-form">
-                <label>
-                    Title:
-                    <input type="text" id="title" required>
-                </label>
-                <label>
-                    Description:
-                    <textarea id="description"></textarea>
-                </label>
-                <div id="option-list">
-                    <div class="option-row">
-                        <input type="datetime-local" class="option-input" required>
-                        <button type="button" class="remove-option hidden">✕</button>
-                    </div>
-                </div>
-                <button type="button" id="add-option" aria-label="Add option">Add Option</button>
-                <button type="button" id="next-week">Next Week</button>
-                <label>
-                    <input type="checkbox" id="allow-multiple"> Allow multiple selections
-                </label>
-                <label>
-                    Deadline:
-                    <input type="datetime-local" id="deadline">
-                </label>
-                <label>
-                    Reminder minutes before deadline:
-                    <input type="number" id="reminder" min="1" placeholder="e.g. 60">
-                </label>
-                <label>
-                    Event length (minutes):
-                    <input type="number" id="duration" min="1" placeholder="60">
-                </label>
-                <label>
-                    Location:
-                    <input type="text" id="location">
-                </label>
-                <label>
-                    Poll time zone:
-                    <select id="poll-tz">
-                        <option value="">Local</option>
-                        <option value="UTC">UTC</option>
-                        <option value="America/New_York">America/New_York</option>
-                        <option value="Europe/London">Europe/London</option>
-                        <option value="Asia/Tokyo">Asia/Tokyo</option>
-                    </select>
-                </label>
-                <button type="submit">Create</button>
-            </form>
-        </section>
-        <section id="manage-section" class="hidden">
-            <h2>My Polls</h2>
-            <input type="text" id="poll-search" aria-label="Search polls" placeholder="Search">
-            <div id="poll-list"></div>
-            <button type="button" id="back-to-create">Back</button>
-        </section>
-        <section id="poll-section" class="hidden">
-            <h2 id="poll-title"></h2>
-            <p id="poll-desc"></p>
-            <p id="tz-note-view" class="tz-note"></p>
-            <label id="display-tz-label" class="hidden">
-                Display times in:
-                <select id="display-tz"></select>
-            </label>
-            <form id="vote-form">
-                <input type="text" id="option-search" aria-label="Filter options" placeholder="Filter options">
-                <div id="options-container"></div>
-                <label>
-                    Your name:
-                    <input type="text" id="participant" required>
-                </label>
-                <button type="submit">Submit Vote</button>
-            </form>
-            <div id="summary" class="hidden"></div>
-            <div id="participants" class="hidden"></div>
-            <div id="final-choice" class="hidden"></div>
-            <div id="comments" class="hidden" aria-live="polite"></div>
-            <form id="comment-form">
-                <label>
-                    Name:
-                    <input type="text" id="comment-name" required>
-                </label>
-                <label>
-                    Comment:
-                    <textarea id="comment-text" required></textarea>
-                </label>
-                <button type="submit">Post Comment</button>
-            </form>
-            <button id="export-ics" aria-label="Add event to calendar" class="hidden">Download ICS</button>
-            <a id="google-calendar" class="hidden" aria-label="Add to Google Calendar" target="_blank">Google Calendar</a>
-            <a id="calendar-feed" class="hidden" aria-label="Subscribe to calendar" download>Subscribe</a>
-            <button id="email-reminder" aria-label="Send poll reminder" class="hidden">Email Reminder</button>
-            <button id="finalize" aria-label="Finalize poll" class="hidden">Finalize Poll</button>
-            <button id="edit" aria-label="Edit poll" class="hidden">Edit Poll</button>
-            <button id="delete" aria-label="Delete poll" class="hidden">Delete Poll</button>
-        </section>
-        <div id="share" class="hidden"></div>
-        <div id="console-output" class="hidden">
-            <h2>Console Output</h2>
-            <pre id="console-log" aria-live="polite"></pre>
-        </div>
-    </div>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
-    <script src="firebase-config.js"></script>
-    <script type="module">
-import { init } from "./script.js";
-if (document.readyState !== 'loading') {
-    init();
-} else {
-    document.addEventListener("DOMContentLoaded", init);
-}
-</script>
+  <h1>Welcome to Doodle Clone</h1>
+  <p>This is a simple mockup page.</p>
+  <button id="clickMe">Click me</button>
+  <script src="script.js"></script>
 </body>
 </html>
